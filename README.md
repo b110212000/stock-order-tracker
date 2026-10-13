@@ -1,36 +1,60 @@
-# OrderLead · 台股訂單領先投資管理 PWA
+# OrderLead — 台股訂單領先投資管理 PWA
 
-**v1.0.0 — 純前端版本**。使用 React + Vite + TypeScript，支援 iPhone 安裝、響應式四分頁、淺色/深色模式，以及 GitHub Actions 自動建置部署。
+目前版本：**v1.5.1（純前端，尚未接後端）**
 
-## 功能現況
+## 網站
 
-- 已完成：總覽、股票追蹤（預載 8 檔並可搜尋）、交易/績效空狀態、設定、主題、PWA、iPhone 安全區與版本規劃。
-- 尚未提供：交易儲存、成本/績效計算、即時行情、AI 分析、背景推播；這些會依 GitHub Issues 一版一版開發。
-- **所有股票評級均未標示為最新分析；頁面不提供即時買賣訊號。**
+https://b110212000.github.io/stock-order-tracker/
 
-## 本機運作
+React + Vite + TypeScript，GitHub Pages 部署；支援安裝 iPhone PWA、手機／桌面 RWD 及深色／淺色模式。
 
-Node.js 22：
+## 已完成的功能
 
-```bash
+- v1.0.0：前端首頁、PWA、五項導覽入口（第五項在 v1.5.0 加入）、GitHub Actions。
+- v1.1.0：股票觀察清單新增、修改、刪除、搜尋、備註。預載 8 檔訂單領先追蹤股票。
+- v1.2.0：手動建立訂單領先研究紀錄，包括需求、PO/Design-in、量產、擴產、法人、同業比較、風險及資料來源；四種評級及歷史紀錄。
+- v1.3.0：買進／賣出、零股、分批交易、FIFO 成本配對、部分賣出與超賣防呆、手續費和賣出交易稅。
+- v1.4.0：自行輸入持股參考價、入金／出金／股利、已實現與未實現淨損益、帳戶現金與總值、已完成交易 30 天等效報酬、手動資產快照及月度交易統計。
+- v1.5.0：價格突破與跌破條件、手動檢查報價、JSON 備份／還原。
+- v1.5.1：交易與資金統計自動化測試、明確排除過期價格提醒。
+
+**尚未實作：即時或盤中行情 API、GPT 自動分析、跨裝置同步、背景通知及 Cloudflare 後端。** 這些功能需在 v2.0.0 另行規劃。
+
+## 資料與精度
+
+- 所有資料存在目前裝置的 IndexedDB；不同瀏覽器、Safari 和已安裝 PWA 可能使用不同儲存空間，不保證同步。
+- 交易採 FIFO，成交手續費及稅金應依券商交割資料手動修正；預估比例不一定符合實際最低費用或券商優惠。
+- 手動參考股價不代表即時價格，手動提醒只會在 App 前景按「檢查目前價格」時判斷；過期日期報價跳過。
+- 單筆 30 天等效報酬是假設該績效可反覆複利的比較指標，不是每月實現報酬。
+- 帳戶淨損益為資產－累計淨入金；有多次入出金時，資產快照之增長率屬簡化流量調整，並非精確的時間加權報酬或 XIRR。
+- 清除瀏覽器資料、刪除 PWA 或更換裝置可能導致資料遺失。請先到設定匯出 JSON；備份包含個人財務資訊，勿提交到公開 GitHub。
+- 沒有最新來源資料時，不會把歷史股票評級顯示為今日 GPT 分析或購買建議。
+
+## 本機執行
+
+需要 Node.js 22 以上：
+
+~~~sh
 npm install
+npm test
 npm run typecheck
 npm run dev
 npm run build
-```
+~~~
 
-## 部署
+## GitHub Actions
 
-每次推送到 `main`，Actions 執行 CI 和 GitHub Pages 部署。先在 **Settings → Pages → Build and deployment → Source** 選擇 **GitHub Actions**。部署成功後預設網址是 https://b110212000.github.io/stock-order-tracker/ 。
+- 每次 main 推送及 PR 觸發 CI：TypeScript、單元測試與生產建置。
+- main 推送觸發 Deploy GitHub Pages；在 Settings → Pages → Source 設為 GitHub Actions。
+- 目前使用 npm install；日後若需要完全鎖定相依套件，可增加 package-lock.json 並切換 npm ci。
 
-## 管理版本
+## Issue 與版本規則
 
 - [版本 Roadmap](docs/ROADMAP.md)
 - [GitHub Issues](https://github.com/b110212000/stock-order-tracker/issues)
-- 一次只做一版。版本完成並測試後再關閉 Issue。
-- 新功能增加次版號（v1.0.0 → v1.1.0）；純 Bug/畫面修正增加修訂號；主版本需要額外確認。
+- 功能更新提升次版號；畫面調整／Bug 修正提升修訂號；主版號必須明確同意。
+- 每項工作先建立 Issue，再更新、測試、關閉。尚未經 iPhone 實測的項目留待驗收。
 
-## 隱私
+## 安全
 
-GitHub Pages 是公開的靜態網站。切勿提交個人交易紀錄、帳戶資料或 API Key。
-未來 v1.3.0 使用 IndexedDB 本機保存交易；v1.5.0 增加備份還原。清除網站資料可能造成資料遺失。
+這是公開的前端程式庫，絕對不可將 API 金鑰、個人交易明細或其他機密資料推送至 GitHub。未來的 AI API 一律必須由後端保管 Key。

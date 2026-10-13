@@ -1,13 +1,14 @@
 {
   "name": "stock-order-tracker",
   "private": true,
-  "version": "1.5.0",
+  "version": "1.5.1",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
@@ -20,6 +21,7 @@
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^4.7.0",
     "typescript": "~5.9.2",
+    "tsx": "^4.20.5",
     "vite": "^6.3.5",
     "vite-plugin-pwa": "^1.0.3"
   }

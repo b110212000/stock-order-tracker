@@ -33,13 +33,13 @@ export default function AlertsPage(){
    for(const r of rules){
     if(!r.enabled)continue
     const q=quotes.find(q=>q.symbol===r.symbol)
-    if(!q){skipped++;continue}
+    if(!q||q.asOf!==today()){skipped++;continue}
     const met=r.direction==='below'?q.price<=r.target:q.price>=r.target
     if(met&&!r.lastMet)triggered++
     if(met!==r.lastMet)await save('alerts',{...r,lastMet:met,lastTriggered:met&&!r.lastMet?now():r.lastTriggered})
    }
    await reload()
-   setNotice(triggered>0?'這次檢查有 '+triggered+' 項價格條件首次符合。請查看提醒列表。':'檢查完成：沒有新的條件跨越。'+(skipped?'有 '+skipped+' 項缺少手動報價。':''))
+   setNotice(triggered>0?'這次檢查有 '+triggered+' 項價格條件首次符合。請查看提醒列表。':'檢查完成：沒有新的條件跨越。'+(skipped?'有 '+skipped+' 項缺少今日手動報價，已跳過。':''))
   }catch(e){setError(String(e))}
  }
  return <div>
@@ -64,7 +64,7 @@ export default function AlertsPage(){
     <label className="form-label">提醒方向<select className="form-input" value={draft.direction} onChange={e=>setDraft({...draft,direction:e.target.value as AlertRule['direction']})}><option value="below">價格低於或等於</option><option value="above">價格高於或等於</option></select></label>
     <label className="form-label">觸發價格（元）<input type="number" min=".0001" step="any" className="form-input" value={draft.target||''} onChange={e=>setDraft({...draft,target:Number(e.target.value)})} required/></label>
     {error&&<div className="error-msg" role="alert">{error}</div>}
-    <p className="field-help">只有在 App 前景手動檢查價格時才會觸發。若報價日期已過期，請先更新價格再檢查。</p>
+    <p className="field-help">只有在 App 前景手動檢查價格時才會觸發。舊日期報價不會觸發，請先手動更新為今日價格。</p>
     <button className="primary" type="submit">儲存提醒</button>
    </form></section></div>}
   </div>
