@@ -2,8 +2,8 @@ import type { Stock, Store, StoreValue } from './types'
 import { WATCHLIST } from './data'
 
 const DB_NAME = 'orderlead-local'
-const DB_VERSION = 1
-export const STORE_NAMES: Store[] = ['stocks', 'analyses', 'trades', 'quotes', 'cashflows', 'alerts']
+const DB_VERSION = 2
+export const STORE_NAMES: Store[] = ['stocks', 'analyses', 'trades', 'quotes', 'cashflows', 'alerts', 'snapshots']
 export const uid = () => crypto.randomUUID()
 export const now = () => new Date().toISOString()
 export const today = () => new Date().toLocaleDateString('sv-SE')

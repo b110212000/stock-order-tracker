@@ -56,5 +56,6 @@ export type AlertRule = {
   lastMet: boolean
   lastTriggered?: string
 }
-export type Store = 'stocks' | 'analyses' | 'trades' | 'quotes' | 'cashflows' | 'alerts'
-export type StoreValue = Stock | Analysis | Trade | Quote | CashFlow | AlertRule
+export type AssetSnapshot = { id: string, date: string, equity: number, cumulativeNetDeposits: number, capturedAt: string }
+export type Store = 'stocks' | 'analyses' | 'trades' | 'quotes' | 'cashflows' | 'alerts' | 'snapshots'
+export type StoreValue = Stock | Analysis | Trade | Quote | CashFlow | AlertRule | AssetSnapshot
