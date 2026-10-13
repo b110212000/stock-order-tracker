@@ -81,3 +81,19 @@ export async function initialize(): Promise<void> {
   await seedStocks()
   localStorage.setItem('orderlead-seeded', '1')
 }
+
+export async function replaceAll(groups: Record<Store, StoreValue[]>): Promise<void> {
+  const db=await open()
+  await new Promise<void>((resolve,reject)=>{
+    const tx=db.transaction(STORE_NAMES,'readwrite')
+    for(const name of STORE_NAMES){
+      const object=tx.objectStore(name)
+      object.clear()
+      for(const item of groups[name])object.put(item)
+    }
+    tx.oncomplete=()=>resolve()
+    tx.onabort=()=>reject(tx.error||new Error('無法還原本機資料'))
+    tx.onerror=()=>reject(tx.error||new Error('無法還原本機資料'))
+  }).finally(()=>db.close())
+  localStorage.setItem('orderlead-seeded','1')
+}

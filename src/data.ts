@@ -1,4 +1,4 @@
-export type Page = 'dashboard' | 'watchlist' | 'trades' | 'performance'
+export type Page = 'dashboard' | 'watchlist' | 'trades' | 'performance' | 'alerts'
 export type Theme = 'system' | 'light' | 'dark'
 export const WATCHLIST = [
   { symbol: '8210', name: '勤誠', group: 'AI伺服器 / 機殼' },
