@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, CircleHelp, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, CircleHelp, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import { drop, initialize, list, now, save } from './db'
+import AnalysisPage from './AnalysisPage'
 import type { Stock } from './types'
 
 const validateSymbol = (symbol: string) => /^[0-9A-Za-z]{2,8}$/.test(symbol)
@@ -8,6 +9,7 @@ const blank: Stock = { symbol: '', name: '', group: '', note: '', createdAt: '',
 export default function WatchlistPage() {
   const [stocks, setStocks] = useState<Stock[]>([])
   const [search, setSearch] = useState('')
+  const [mode,setMode] = useState<'stocks'|'analysis'>('stocks')
   const [selected, setSelected] = useState<Stock | null>(null)
   const [draft, setDraft] = useState<Stock | null>(null)
   const [editingSymbol, setEditingSymbol] = useState<string | null>(null)
@@ -42,9 +44,11 @@ export default function WatchlistPage() {
     if (!window.confirm('確定移除 ' + stock.symbol + ' ' + stock.name + ' 的觀察清單項目？交易資料不會刪除。')) return
     try { await drop('stocks', stock.symbol); setSelected(null); await reload() } catch (e) { setError(String(e)) }
   }
+  if(mode==='analysis')return <AnalysisPage onBack={()=>setMode('stocks')}/>
   return <>
     <div className="notice"><CircleHelp size={18}/> 目前不連接股價 API；這是你自行管理的觀察清單，沒有即時買賣建議。</div>
     {error && <div className="error-msg" role="alert">{error}</div>}
+    <div className="action-bar" style={{marginBottom:12}}><button className="mini-button" onClick={()=>setMode('analysis')}><BookOpen size={16}/> 訂單領先分析</button></div>
     <div className="tools-row"><label className="search"><Search size={18}/><input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜尋代號、名稱、產業或備註" aria-label="搜尋股票"/></label><button className="primary" onClick={() => edit()}><Plus size={17}/> 新增</button></div>
     <div className="section"><h2>股票觀察清單</h2><small>{filtered.length} 檔</small></div>
     <div className="list">
