@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeftRight, Pencil, Plus, Trash2, Wallet, X } from 'lucide-react'
+import { ArrowLeftRight, FileUp, Pencil, Plus, Trash2, Wallet, X } from 'lucide-react'
 import { drop, list, now, save, today, uid } from './db'
 import { calculateTrades, dollars } from './trade-calc'
 import type { Stock, Trade } from './types'
+import TradeImportPage from './TradeImportPage'
 
 const draftTrade=():Trade=>({id:uid(),symbol:'',side:'buy',date:today(),quantity:100,price:0,fee:0,tax:0,note:'',createdAt:now()})
 const orderTotal=(t:Trade)=>t.quantity*t.price+(t.side==='buy'?t.fee+t.tax:-t.fee-t.tax)
@@ -12,6 +13,7 @@ export default function TradePage(){
   const [draft,setDraft]=useState<Trade|null>(null)
   const [error,setError]=useState('')
   const [busy,setBusy]=useState(false)
+  const [showImport,setShowImport]=useState(false)
   const reload=useCallback(async()=>{const [t,s]=await Promise.all([list<Trade>('trades'),list<Stock>('stocks')]);setTrades(t.sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt)));setStocks(s)},[])
   useEffect(()=>{reload().catch(e=>setError(String(e)))},[reload])
   const portfolio=useMemo(()=>{try{return {value:calculateTrades(trades),error:''}}catch(e){return {value:null,error:String(e instanceof Error?e.message:e)}}},[trades])
@@ -40,11 +42,12 @@ export default function TradePage(){
     const t={...draft,[key]:value},gross=t.quantity*t.price
     setDraft({...t,fee:Math.round(gross*0.001425),tax:t.side==='sell'?Math.round(gross*0.003):0})
   }
+  if(showImport)return <TradeImportPage onBack={()=>{setShowImport(false);void reload()}} onRefresh={()=>{void reload()}}/>
   return <div>
     <div className="notice"><Wallet size={18}/> 交易以實際成交日期排序，採先進先出（FIFO）成本配對。系統提供費用預估，請以券商交割明細為準。</div>
     {error&& !draft&&<div className="error-msg" role="alert">{error}</div>}
     {portfolio.error&&<div className="error-msg" role="alert">{portfolio.error}</div>}
-    <div className="section"><h2>我的持股</h2><button className="primary" onClick={()=>{setDraft({...draftTrade(),symbol:stocks[0]?.symbol||''});setError('')}}><Plus size={16}/> 新增交易</button></div>
+    <div className="section"><h2>我的持股</h2><div className="action-bar"><button className="mini-button" onClick={()=>setShowImport(true)}><FileUp size={16}/> 郵件匯入</button><button className="primary" onClick={()=>{setDraft({...draftTrade(),symbol:stocks[0]?.symbol||''});setError('')}}><Plus size={16}/> 新增交易</button></div></div>
     <div className="summary"><div className="card"><small>持有股票</small><strong>{portfolio.value?.holdings.length??'—'} 檔</strong></div><div className="card"><small>已實現淨損益</small><strong className={(portfolio.value?.realized||0)>=0?'text-good':'text-bad'}>NT$ {portfolio.value?dollars(portfolio.value.realized):'—'}</strong></div></div>
     {portfolio.value?.holdings.length?<div className="stack">{portfolio.value.holdings.map(h=><div className="item-row" key={h.symbol}><div><b>{name(h.symbol)} · {h.symbol}</b><small>{h.quantity} 股 · 平均成本 NT$ {dollars(h.averageCost)}</small></div><b>NT$ {dollars(h.cost)}</b></div>)}</div>:<div className="card no-result">尚無持股。可以先輸入第一筆買進交易。</div>}
     <div className="section"><h2>全部交易紀錄</h2><small>{trades.length} 筆</small></div>

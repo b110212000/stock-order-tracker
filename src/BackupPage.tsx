@@ -68,7 +68,7 @@ export default function BackupPage(){
    if(!obj(parsed)||parsed.format!=='orderlead-backup'||parsed.schema!==1||!obj(parsed.data))throw Error('不是支援的 OrderLead 備份檔')
    const data={} as Record<Store,StoreValue[]>
    for(const store of STORE_NAMES){
-    const items=parsed.data[store]
+    const items=store==='imports'&&parsed.data[store]===undefined?[]:parsed.data[store]
     if(!arr(items))throw Error(store+' 資料格式不正確')
     data[store]=validate(store,items)
    }
@@ -84,6 +84,6 @@ export default function BackupPage(){
   <div className="action-bar"><button className="mini-button" disabled={busy} onClick={()=>void exportData()}><Download size={17}/> 匯出 JSON</button><button className="mini-button" disabled={busy} onClick={()=>input.current?.click()}><FileUp size={17}/> 還原 JSON</button></div>
   <input type="file" ref={input} style={{display:'none'}} accept=".json,application/json" onChange={e=>{const f=e.target.files?.[0];if(f)void importData(f)}}/>
   {info&&<p role="status" className="field-help">{info}</p>}
-  <p className="privacy-warning"><ShieldAlert size={16}/> 備份含私人投資紀錄，請勿上傳到公開 GitHub Repository。</p>
+  <p className="privacy-warning"><ShieldAlert size={16}/> 備份含私人投資紀錄、待核對匯入資料，請勿上傳到公開 GitHub Repository。</p>
  </section>
 }

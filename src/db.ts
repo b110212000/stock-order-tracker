@@ -1,9 +1,9 @@
-import type { Stock, Store, StoreValue } from './types'
+import type { Stock, Store, StoreValue, StagedTrade, Trade } from './types'
 import { WATCHLIST } from './data'
 
 const DB_NAME = 'orderlead-local'
-const DB_VERSION = 2
-export const STORE_NAMES: Store[] = ['stocks', 'analyses', 'trades', 'quotes', 'cashflows', 'alerts', 'snapshots']
+const DB_VERSION = 3
+export const STORE_NAMES: Store[] = ['stocks', 'analyses', 'trades', 'quotes', 'cashflows', 'alerts', 'snapshots', 'imports']
 export const uid = () => crypto.randomUUID()
 export const now = () => new Date().toISOString()
 export const today = () => new Date().toLocaleDateString('sv-SE')
@@ -96,4 +96,32 @@ export async function replaceAll(groups: Record<Store, StoreValue[]>): Promise<v
     tx.onerror=()=>reject(tx.error||new Error('無法還原本機資料'))
   }).finally(()=>db.close())
   localStorage.setItem('orderlead-seeded','1')
+}
+
+export async function saveMany<T extends StoreValue>(store: Store, items: T[]): Promise<void> {
+  if (!items.length) return
+  const db=await open()
+  try {
+    await new Promise<void>((resolve,reject)=>{
+      const tx=db.transaction(store,'readwrite')
+      const object=tx.objectStore(store)
+      for(const item of items)object.put(item)
+      tx.oncomplete=()=>resolve()
+      tx.onerror=()=>reject(tx.error||new Error('批次寫入失敗'))
+      tx.onabort=()=>reject(tx.error||new Error('批次寫入中止'))
+    })
+  } finally { db.close() }
+}
+export async function approveImportedTrade(staged: StagedTrade, trade: Trade): Promise<void> {
+  const db=await open()
+  try {
+    await new Promise<void>((resolve,reject)=>{
+      const tx=db.transaction(['imports','trades'],'readwrite')
+      tx.objectStore('trades').add(trade)
+      tx.objectStore('imports').put({...staged,status:'approved'})
+      tx.oncomplete=()=>resolve()
+      tx.onerror=()=>reject(tx.error||new Error('核准匯入失敗'))
+      tx.onabort=()=>reject(tx.error||new Error('核准匯入中止'))
+    })
+  } finally { db.close() }
 }

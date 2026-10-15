@@ -57,5 +57,23 @@ export type AlertRule = {
   lastTriggered?: string
 }
 export type AssetSnapshot = { id: string, date: string, equity: number, cumulativeNetDeposits: number, capturedAt: string }
-export type Store = 'stocks' | 'analyses' | 'trades' | 'quotes' | 'cashflows' | 'alerts' | 'snapshots'
-export type StoreValue = Stock | Analysis | Trade | Quote | CashFlow | AlertRule | AssetSnapshot
+export type StagedTrade = {
+  id: string
+  symbol: string
+  name: string
+  date: string
+  side: 'buy' | 'sell'
+  quantity: number
+  price: number
+  gross: number
+  orderId: string
+  time: string
+  fee: number | null
+  tax: number | null
+  feeStatus?: string
+  status: 'pending' | 'approved' | 'skipped'
+  createdAt: string
+  importedAt: string
+}
+export type Store = 'stocks' | 'analyses' | 'trades' | 'quotes' | 'cashflows' | 'alerts' | 'snapshots' | 'imports'
+export type StoreValue = Stock | Analysis | Trade | Quote | CashFlow | AlertRule | AssetSnapshot | StagedTrade
