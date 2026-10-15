@@ -56,6 +56,7 @@ export default function PerformancePage({compact=false}:{compact?:boolean}){
  if(compact)return <div className="stat-grid"><div className="card stat"><div className="stat-caption">帳戶總值（手動估值）</div><strong>{data?.equity===null||data?.equity===undefined?'NT$ —':'NT$ '+dollars(data.equity)}</strong><small>現金＋持股手動價格</small></div><div className="card stat"><div className="stat-caption">已實現淨損益</div><strong>{data?'NT$ '+dollars(data.p.realized):'—'}</strong><small>FIFO 已完成交易</small></div><div className="card stat"><div className="stat-caption">持有股票</div><strong>{data?.p.holdings.length??'—'} 檔</strong><small>已登記的買賣庫存</small></div><div className="card stat"><div className="stat-caption">整體淨損益</div><strong>{data?.profit===null||data?.profit===undefined?'NT$ —':'NT$ '+dollars(data.profit)}</strong><small>不等於月化報酬</small></div></div>
  return <div className="performance-page">
   <div className="notice"><ChartNoAxesCombined size={19}/> 目前沒有即時行情；持股價格需要手動輸入。每月已實現損益與帳戶資產增減是不同概念。</div>
+  {trades.some(t=>t.note.includes('費用估算，非實際交割費用'))&&<div className="import-warning"><p>部分交易使用估算手續費或交易稅；目前績效並非實際交割淨損益，請依券商對帳單修正費用。</p></div>}
   {(error||summary.error)&&<p className="error-msg" role="alert">{error||summary.error}</p>}
   <div className="stat-grid">
    <div className="card stat"><div className="stat-caption">帳戶總值</div><strong>{data?.equity===null||data?.equity===undefined?'—':'NT$ '+dollars(data.equity)}</strong><small>現金＋手動估值市值</small></div>
