@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Activity, X } from 'lucide-react'
 import TradeHistoryPage from './TradeHistoryPage'
+import ErrorBoundary from './ErrorBoundary'
+import './ErrorBoundary.css'
 import { updateSW } from './pwa'
 
 /** Stage 1: Hide all unapproved modules, without deleting their code or IndexedDB data. */
@@ -14,7 +16,8 @@ export default function App(){
   useEffect(()=>{
     const media=matchMedia('(prefers-color-scheme: dark)')
     const apply=()=>{
-      const stored=localStorage.getItem('orderlead-theme')
+      let stored:string|null=null
+      try{stored=localStorage.getItem('orderlead-theme')}catch{ /* private browsing restrictions */ }
       document.documentElement.dataset.theme=stored==='light'||stored==='dark'
         ?stored:(media.matches?'dark':'light')
     }
@@ -28,8 +31,8 @@ export default function App(){
       <span className="review-status">第一關 · 交易紀錄</span>
     </header>
     <main className="main"><div className="content">
-      <TradeHistoryPage/>
-      <footer className="footer">OrderLead · v1.10.0 · 其他功能暫時隱藏 · 非投資建議</footer>
+      <ErrorBoundary><TradeHistoryPage/></ErrorBoundary>
+      <footer className="footer">OrderLead · v1.10.1 · 其他功能暫時隱藏 · 非投資建議</footer>
     </div></main>
     {refresh&&<div className="update" role="status">
       有新版本可更新 <button onClick={()=>updateSW(true)}>立即更新</button>

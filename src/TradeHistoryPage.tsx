@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Activity, ArrowDownUp, ChevronDown, ChevronUp, FileUp, Inbox, Search, ShieldCheck } from 'lucide-react'
-import { list, replaceReviewTrades } from './db'
+import { list, replaceReviewTrades, readOrRecoverReviewTrades } from './db'
 import { parseTradeImportBytes, MAX_IMPORT_BYTES } from './import-file'
 import { organizeGmailHistory } from './gmail-history'
 import { toStaged } from './import-trades'
@@ -27,7 +27,22 @@ export default function TradeHistoryPage(){
     const existing=await list<StagedTrade>('reviewTrades')
     setRows(existing)
   },[])
-  useEffect(()=>{refresh().catch(e=>setError('讀取歷史交易資料失敗：'+String(e))).finally(()=>setLoading(false))},[refresh])
+  useEffect(()=>{
+    let active=true
+    readOrRecoverReviewTrades()
+      .then(({rows,recovered,ignored})=>{
+        if(!active)return
+        setRows(rows)
+        if(recovered>0){
+          setOrigin('已從舊版 Gmail 暫存自動恢復 '+recovered+' 筆')
+          setMessage('已自動接續你先前匯入的交易紀錄（'+recovered+' 筆）；舊資料完整保留。'+
+            (ignored>0?'其中 '+ignored+' 筆不符合 2024 年起的範圍或格式，未複製。':''))
+        }
+      })
+      .catch(e=>{if(active)setError('讀取歷史交易失敗：'+(e instanceof Error?e.message:String(e))+'。原有資料仍保留，請先重新載入頁面。')})
+      .finally(()=>{if(active)setLoading(false)})
+    return ()=>{active=false}
+  },[])
   const history=useMemo(()=>organizeGmailHistory(rows,'2024-01-01'),[rows])
   const matches=useMemo(()=>new Map(history.matchedSales.map(x=>[x.id,x])),[history])
   const filtered=useMemo(()=>{
@@ -83,8 +98,8 @@ export default function TradeHistoryPage(){
     {message&&<div className="notice history-message" role="status"><ShieldCheck size={18}/>{message}</div>}
     {loading?<div className="card history-empty">正在讀取本機交易資料…</div>:rows.length===0?<div className="card history-empty">
       <Inbox size={34}/>
-      <h2>從第一筆 Gmail 成交紀錄開始</h2>
-      <p>這個畫面只會顯示交易紀錄，不會直接更動既有的正式持股或資金計算。請選擇已整理好的 2024 年起 JSON / ZIP。</p>
+      <h2>這裡尚未有交易表資料</h2>
+      <p>已嘗試從本機舊版 Gmail 暫存接續歷史交易；如果還是空白，可能當初是在另一個 Safari／主畫面 PWA 儲存環境匯入。你可以直接選 2024 年起的 JSON / ZIP，原本的正式交易與資金資料不會被更動。</p>
       <div className="history-actions"><button className="primary" onClick={()=>picker.current?.click()} disabled={working}>選擇 2024 年交易檔</button><button className="mini-button" onClick={()=>void usePreviousInbox()} disabled={working}>使用舊版已暫存紀錄</button></div>
     </div>:<>
       <div className="history-source">

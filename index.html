@@ -12,7 +12,13 @@
   <title>OrderLead · 台股投資管理</title>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <main style="max-width:540px;margin:16vh auto;padding:24px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#20314d">
+      <h1 style="font-size:22px">OrderLead 正在載入交易紀錄</h1>
+      <p style="font-size:14px;line-height:1.8">如果畫面一直停在這裡，可能是舊版 PWA 快取未更新。原本的交易資料不會因此刪除。</p>
+      <a href="./?retry=1" style="color:#2268c8">重新載入 OrderLead</a>
+    </main>
+  </div>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>

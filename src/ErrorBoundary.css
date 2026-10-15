@@ -1,0 +1,5 @@
+
+.review-error{min-height:60dvh;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;max-width:650px;margin:auto;padding:25px;color:var(--text)}
+.review-error h1{font-size:24px}
+.review-error p{font-size:13px;color:var(--sub);line-height:1.85}
+.review-error-detail{font-family:monospace;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;overflow-wrap:anywhere;max-width:100%}
