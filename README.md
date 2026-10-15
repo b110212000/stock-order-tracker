@@ -1,12 +1,19 @@
 # OrderLead — 台股訂單領先投資管理 PWA
 
-目前版本：**v1.10.1（第一關：修正空白畫面並接續舊 Gmail 暫存）**
+目前版本：**v1.10.2（第一關：PWA 快取修復與更新）**
 
 ## 網站
 
 https://b110212000.github.io/stock-order-tracker/
 
 React + Vite + TypeScript，GitHub Pages 部署；支援安裝 iPhone PWA、手機／桌面 RWD 及深色／淺色模式。
+
+## PWA 卡在舊版本時
+
+- 新版交易頁右上角的「修復更新」按鈕只會清除 OrderLead 的離線快取和同 scope 的 Service Worker，**不會刪除 IndexedDB、localStorage、交易紀錄、資金及個人檔案**。完成後自動重新載入帶時間戳的網址。
+- 如果仍卡在 v1.6.0，看不到新版按鈕，可以試著從 Safari 直接開啟 [獨立修復頁](https://b110212000.github.io/stock-order-tracker/repair.html)。請在頁面內主動點「清除 App 快取並更新」。
+- **注意**：舊 v1.6.0 Service Worker 可能把修復頁也攔截回舊首頁，因此此路徑不保證對每個舊版 PWA 都有效；Safari 與主畫面 PWA 也可能有不同儲存環境。遇到此情況請先回報畫面，**不要直接刪除 App 或清除網站資料**，以免遺失未備份的 IndexedDB。
+- 多個 GitHub Pages PWA 共用同一 origin，修復只作用於 `stock-order-tracker` 路徑下的 Workbox 快取，不清除其他專案的快取。
 
 ## 第一關：只開放 2024 年起富邦 Gmail 歷史交易
 
@@ -39,6 +46,7 @@ React + Vite + TypeScript，GitHub Pages 部署；支援安裝 iPhone PWA、手�
 - v1.9.0：按使用者要求啟動逐項驗收模式；唯一開放 2024 年起的 Gmail 買賣事實表，其他功能隱藏、不刪資料。
 - v1.10.0：第一關延伸加入買賣 FIFO 配對與已實現**毛**損益；遇到既往無法配對交易則標記後續成本待確認，其餘功能仍不開放。
 - v1.10.1：初次開啟自動從舊版 `imports` 將 2024 起 Gmail 暫存複製到 `reviewTrades`，保留舊資料，新增畫面錯誤邊界與靜態載入提示，降低更新後看到空白頁面的機率。
+- v1.10.2：交易頁右上新增「修復更新」；只解除 OrderLead Service Worker 並清除符合 App scope 的 Workbox CacheStorage，再重新載入新版。提供獨立 `repair.html` 修復頁，其他模組仍不開放。
 
 **尚未實作：即時或盤中行情 API、GPT 自動分析、跨裝置同步、背景通知及 Cloudflare 後端。** 這些功能需在 v2.0.0 另行規劃。
 

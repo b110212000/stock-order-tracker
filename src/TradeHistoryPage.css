@@ -18,3 +18,9 @@
 @media(max-width:700px){.history-pnl-summary strong{font-size:21px}.history-counters .card{min-height:100px}.history-table{min-width:950px}}
 
 .history-empty h2{line-height:1.6}
+
+.review-header-actions{display:flex;align-items:center;gap:15px}
+.review-repair-btn{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);padding:9px 11px;font-size:12px;font-weight:650}
+.review-repair-btn:hover{background:var(--lightblue);color:var(--blue)}
+.review-repair-btn:disabled{opacity:.55}
+@media(max-width:700px){.review-header-actions{gap:8px}.review-header-actions .review-status{display:none}.review-repair-btn{padding:9px}.review-repair-btn span{font-size:11px}.brand b{font-size:15px}}

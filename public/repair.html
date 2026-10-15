@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#142039">
+<title>OrderLead · 修復更新</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif;color:#15283e;background:#f5f7fb}
+body{margin:0;padding:24px}
+main{max-width:480px;margin:9vh auto;background:#fff;border-radius:17px;border:1px solid #e3e9ef;padding:26px;box-shadow:0 9px 30px #1223}
+h1{font-size:23px;margin:0 0 13px}p{font-size:14px;line-height:1.85}
+button,a.button{display:inline-block;border:none;border-radius:10px;background:#1e68c8;color:white;font:600 14px inherit;padding:12px 18px;text-decoration:none;cursor:pointer}
+button:disabled{opacity:.65}a.button{background:#edf4ff;color:#164d93}
+.note{font-size:12px;color:#617187}#status{white-space:pre-wrap;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<main>
+<h1>OrderLead · 修復更新</h1>
+<p>如果你的 App 一直停在舊版本，可以清除 <strong>OrderLead 的離線快取與舊 Service Worker</strong>，再重新讀取網站。</p>
+<p><strong>不會清除</strong> IndexedDB 裡的 Gmail 歷史交易、正式交易、資金或 localStorage 設定，也不會移除已安裝的 App。</p>
+<button id="repair" type="button">清除 App 快取並更新</button>
+<p id="status" role="status"></p>
+<p class="note">若點進來看到的仍是舊版 App 而不是此頁，表示舊 Service Worker 可能仍在攔截網址。請先嘗試從 Safari 開啟此網址；先不要刪除 App 或清除網站資料，以免遺失私人交易。</p>
+<a class="button" href="./">返回 OrderLead</a>
+</main>
+<script>
+(function(){
+  var button=document.getElementById('repair');
+  var status=document.getElementById('status');
+  var scope=new URL('./',location.href).href;
+  function isAppCache(key){
+    var u=new URL(scope);
+    var path=u.pathname.replace(/\/+$/,'')+'/';
+    return key.indexOf(u.origin+path)>=0||(key.indexOf('workbox-')===0&&key.indexOf(path)>=0);
+  }
+  button.addEventListener('click',async function(){
+    if(!confirm('確認修復更新？只清除 OrderLead PWA 快取，不清除任何交易或資金資料。'))return;
+    button.disabled=true;
+    status.textContent='正在解除舊版快取…';
+    var removed=0,workers=0,errors=[];
+    try {
+      if('caches' in window){
+        var keys=await caches.keys();
+        for(var i=0;i<keys.length;i++){
+          if(isAppCache(keys[i])){
+            try{if(await caches.delete(keys[i]))removed++}catch(e){errors.push('部分快取未能清除')}
+          }
+        }
+      }else errors.push('CacheStorage 不支援');
+      if('serviceWorker' in navigator){
+        var regs=await navigator.serviceWorker.getRegistrations();
+        for(var j=0;j<regs.length;j++){
+          var reg=regs[j];
+          if(new URL(reg.scope).pathname.replace(/\/+$/,'')===new URL(scope).pathname.replace(/\/+$/,'')){
+            try{if(await reg.unregister())workers++}catch(e){errors.push('舊 Service Worker 無法解除')}
+          }
+        }
+      }
+      if(errors.length){
+        status.textContent='部分清理未完成：'+errors.join('、')+'。\n請先查看 Safari 是否能顯示新版。';
+        button.disabled=false;
+        return;
+      }
+      status.textContent='已解除 '+workers+' 個舊 Service Worker、清除 '+removed+' 組 App 快取。正在開啟新版，交易資料未變動。';
+      var next=new URL('./',location.href);
+      next.searchParams.set('repair',String(Date.now()));
+      location.replace(next.href);
+    }catch(e){
+      status.textContent='修復失敗：'+String(e)+'。請勿直接刪除 App；你可以再試一次。';
+      button.disabled=false;
+    }
+  });
+})();
+</script>
+</body>
+</html>
