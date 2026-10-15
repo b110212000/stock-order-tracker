@@ -53,7 +53,7 @@ export default function BulkApprovalDialog({staged,existing,onClose,onImported}:
         list<StagedTrade>('imports'),list<Trade>('trades')
       ])
       const latest=planBulkApprovals(currentStaged,current,options)
-      const signature=(rows:Trade[])=>rows.map(t=>t.id).sort().join('|')
+      const signature=(rows:Trade[])=>JSON.stringify([...rows].sort((a,b)=>a.id.localeCompare(b.id)))
       if(signature(latest.trades)!==signature(plan.trades)){
         throw Error('交易紀錄在預覽後有變更，請關閉視窗重新核對')
       }

@@ -78,3 +78,13 @@ test('rejects negative rates',()=>{
  const r=row('o101','3032','buy','2026-01-01',100,50,0,0)
  assert.throws(()=>planBulkApprovals([r],[],{...DEFAULT_BULK_FEES,stockTaxPercent:-1}),/非負數/)
 })
+
+test('a previously skipped source trade blocks same symbol until reconciled',()=>{
+ const skipped={...row('o100','3032','sell','2026-01-02',10,100,0,0),status:'skipped' as const}
+ const pending=row('o101','3032','buy','2026-01-03',10,100,0,0)
+ const good=row('o102','0050','buy','2026-01-03',10,100,0,0)
+ const p=planBulkApprovals([skipped,pending,good],[],DEFAULT_BULK_FEES)
+ assert.equal(p.trades.length,1)
+ assert.equal(p.trades[0].symbol,'0050')
+ assert.match(p.blocked[0].reason,/略過/)
+})

@@ -18,7 +18,6 @@ export type BulkPlan={
   updates:StagedTrade[]
   blocked:BlockedSymbol[]
   alreadyImported:number
-  sourceDuplicates:number
   estimatedCount:number
   pendingCount:number
 }
@@ -67,7 +66,8 @@ export function planBulkApprovals(staged:StagedTrade[],existing:Trade[],fees:Bul
   const approvedIdSet=new Set(existing.map(x=>x.id))
   const manualSignatures=new Set(existing.filter(x=>!x.id.startsWith('gmail:')).map(fingerprint))
   const grouped=new Map<string,StagedTrade[]>()
-  let alreadyImported=0,sourceDuplicates=0
+  let alreadyImported=0
+  const skippedSymbols=new Set(staged.filter(row=>row.status==='skipped').map(row=>row.symbol))
   for(const row of pending){
     if(approvedIdSet.has('gmail:'+row.id)){alreadyImported++;continue}
     const current=grouped.get(row.symbol)||[]
@@ -77,6 +77,10 @@ export function planBulkApprovals(staged:StagedTrade[],existing:Trade[],fees:Bul
   let estimatedCount=0
   for(const [symbol,rows] of grouped){
     const skip=(reason:string)=>blocked.push({symbol,count:rows.length,reason})
+    if(skippedSymbols.has(symbol)){
+      skip('同股票有先前略過的歷史交易，請先確認是否影響成本與庫存')
+      continue
+    }
     if(rows.some(row=>manualSignatures.has(fingerprint(row)))) {
       skip('與手動交易日期、股數及成交價格相同，無法排除重複匯入')
       continue
@@ -108,6 +112,6 @@ export function planBulkApprovals(staged:StagedTrade[],existing:Trade[],fees:Bul
       if(c.est)estimatedCount++
     }
   }
-  return {trades:accepted,updates,blocked,alreadyImported,sourceDuplicates,
+  return {trades:accepted,updates,blocked,alreadyImported,
     estimatedCount,pendingCount:pending.length}
 }
