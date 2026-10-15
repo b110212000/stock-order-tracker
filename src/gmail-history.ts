@@ -1,7 +1,24 @@
 import type { StagedTrade } from './types'
 
-export type MatchedBuy = { id:string, date:string, quantity:number }
-export type MatchedSale = { id:string, buys:MatchedBuy[] }
+export type MatchedBuy = {
+  id:string
+  date:string
+  quantity:number
+  unitPrice:number
+  cost:number
+  proceeds:number
+  grossPnl:number
+}
+export type MatchedSale = {
+  id:string
+  buys:MatchedBuy[]
+  proceeds:number
+  cost:number
+  grossPnl:number
+  grossRoi:number|null
+  reliable:boolean
+  reason?:string
+}
 export type UnmatchedSale = { row:StagedTrade, available:number, missing:number }
 export type HistoryReview = {
   included:StagedTrade[]
@@ -10,29 +27,38 @@ export type HistoryReview = {
   rawCount:number
   buyCount:number
   sellCount:number
+  reliableGrossPnl:number
+  reliableSaleCount:number
+  uncertainSaleCount:number
 }
-type Lot = { id:string,date:string,remaining:number }
+type Lot = { id:string,date:string,remaining:number,unitCost:number,unitPrice:number }
 const compare=(a:StagedTrade,b:StagedTrade)=>a.date.localeCompare(b.date)||
   a.time.localeCompare(b.time)||a.id.localeCompare(b.id)
+const rounded=(value:number)=>Math.round((value+Number.EPSILON)*100)/100
 
-/** 2024+ confirmed email transactions only.
- * All buys stay visible. Exclude any sale that can't be fully covered by earlier buys.
- * This is NOT a calculation of the user's real current securities balance. */
+/** Only the user's 2024+ documented Gmail trades, not brokerage holdings or a tax ledger.
+ * All buys stay visible. Unmatched sales are excluded entirely without consuming buy lots.
+ * Once a symbol has an unknown-origin sale, later provisional FIFO matches remain visible,
+ * but their calculated P&L must NOT be reported as reliable or included in totals. */
 export function organizeGmailHistory(source:StagedTrade[],since='2024-01-01'):HistoryReview {
   const rows=source.filter(x=>x.date>=since && (x.side==='buy'||x.side==='sell'))
     .sort(compare)
   const inventory=new Map<string,Lot[]>()
+  const tainted=new Set<string>()
   const included:StagedTrade[]=[]
   const unmatched:UnmatchedSale[]=[]
   const matchedSales:MatchedSale[]=[]
-  let buyCount=0,sellCount=0
+  let buyCount=0,sellCount=0,reliableGrossPnl=0,reliableSaleCount=0,uncertainSaleCount=0
+
   for(const row of rows) {
-    if(!Number.isSafeInteger(row.quantity)||row.quantity<=0)continue
+    if(!Number.isSafeInteger(row.quantity)||row.quantity<=0||
+       !Number.isFinite(row.gross)||row.gross<=0)continue
     const lots=inventory.get(row.symbol)||[]
     if(row.side==='buy'){
       buyCount++
       included.push(row)
-      lots.push({id:row.id,date:row.date,remaining:row.quantity})
+      lots.push({id:row.id,date:row.date,remaining:row.quantity,
+        unitCost:row.gross/row.quantity,unitPrice:row.price})
       inventory.set(row.symbol,lots)
       continue
     }
@@ -40,23 +66,45 @@ export function organizeGmailHistory(source:StagedTrade[],since='2024-01-01'):Hi
     const available=lots.reduce((n,l)=>n+l.remaining,0)
     if(available<row.quantity){
       unmatched.push({row,available,missing:row.quantity-available})
-      // Unmatched sale is excluded entirely and consumes no documented buy lots.
-      // Reported remaining lots are not claimed to be current holdings.
+      tainted.add(row.symbol)
+      // Unmatched sale is excluded and does not consume documented buys.
+      // Therefore subsequent matches of this symbol cannot claim reliable P&L.
       continue
     }
     const buys:MatchedBuy[]=[]
-    let remaining=row.quantity
+    let remaining=row.quantity,cost=0
     while(remaining>0){
       const lot=lots[0]
       const used=Math.min(remaining,lot.remaining)
+      const allocatedCost=used*lot.unitCost
+      const allocatedProceeds=used*row.gross/row.quantity
+      cost+=allocatedCost
       remaining-=used
       lot.remaining-=used
-      buys.push({id:lot.id,date:lot.date,quantity:used})
+      buys.push({
+        id:lot.id,date:lot.date,quantity:used,unitPrice:lot.unitPrice,
+        cost:rounded(allocatedCost),proceeds:rounded(allocatedProceeds),
+        grossPnl:rounded(allocatedProceeds-allocatedCost)
+      })
       if(!lot.remaining)lots.shift()
     }
+    const proceeds=rounded(row.gross)
+    cost=rounded(cost)
+    const grossPnl=rounded(proceeds-cost)
+    const reliable=!tainted.has(row.symbol)
+    const sale:MatchedSale={
+      id:row.id,buys,proceeds,cost,grossPnl,
+      grossRoi:cost>0?grossPnl/cost:null,reliable,
+      reason:reliable?undefined:'該股票先前有無法配對的賣出，可能已使用這些買進股數；本筆成本待確認。'
+    }
     included.push(row)
-    matchedSales.push({id:row.id,buys})
+    matchedSales.push(sale)
+    if(reliable){reliableGrossPnl+=grossPnl;reliableSaleCount++}
+    else uncertainSaleCount++
   }
-  return {included:included.reverse(),unmatched:unmatched.reverse(),
-    matchedSales,rawCount:rows.length,buyCount,sellCount}
+  return {
+    included:included.reverse(),unmatched:unmatched.reverse(),
+    matchedSales,rawCount:rows.length,buyCount,sellCount,
+    reliableGrossPnl:rounded(reliableGrossPnl),reliableSaleCount,uncertainSaleCount
+  }
 }

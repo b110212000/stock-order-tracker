@@ -29,7 +29,7 @@ export default function App(){
     </header>
     <main className="main"><div className="content">
       <TradeHistoryPage/>
-      <footer className="footer">OrderLead · v1.9.0 · 其他功能暫時隱藏 · 非投資建議</footer>
+      <footer className="footer">OrderLead · v1.10.0 · 其他功能暫時隱藏 · 非投資建議</footer>
     </div></main>
     {refresh&&<div className="update" role="status">
       有新版本可更新 <button onClick={()=>updateSW(true)}>立即更新</button>

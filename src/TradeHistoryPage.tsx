@@ -29,7 +29,7 @@ export default function TradeHistoryPage(){
   },[])
   useEffect(()=>{refresh().catch(e=>setError('讀取歷史交易資料失敗：'+String(e))).finally(()=>setLoading(false))},[refresh])
   const history=useMemo(()=>organizeGmailHistory(rows,'2024-01-01'),[rows])
-  const matches=useMemo(()=>new Map(history.matchedSales.map(x=>[x.id,x.buys])),[history])
+  const matches=useMemo(()=>new Map(history.matchedSales.map(x=>[x.id,x])),[history])
   const filtered=useMemo(()=>{
     const q=search.trim().toLowerCase()
     return history.included.filter(row=>(filter==='all'||row.side===filter)&&
@@ -72,9 +72,9 @@ export default function TradeHistoryPage(){
   return <section className="history-page">
     <div className="history-heading">
       <div>
-        <span className="eyebrow">STEP 01 · 僅驗證交易事實</span>
+        <span className="eyebrow">STEP 01 · 交易配對與毛損益</span>
         <h1>歷史交易紀錄</h1>
-        <p>從 2024 年開始，只看富邦證券 Gmail 的「現買／現賣」。先確認每一筆資料，其他功能暫時不開放。</p>
+        <p>2024 年起的富邦 Gmail「現買／現賣」，以先進先出（FIFO）配對買進來源，計算可確認的每筆賣出毛損益。其他功能仍不開放。</p>
       </div>
       <button className="primary" disabled={working} onClick={()=>picker.current?.click()}><FileUp size={17}/>{working?'讀取中…':'匯入 Gmail 紀錄'}</button>
     </div>
@@ -95,7 +95,13 @@ export default function TradeHistoryPage(){
       <div className="history-counters">
         <div className="card"><small>現買（全部列入）</small><strong>{history.buyCount}</strong><span>包含定期定額與尚未賣出的買進</span></div>
         <div className="card"><small>現賣（買進股數足夠）</small><strong>{history.matchedSales.length}</strong><span>依成交時間向前配對</span></div>
-        <div className="card"><small>現賣（無法配對）</small><strong>{history.unmatched.length}</strong><span>不列入主要交易表</span></div>
+        <div className="card"><small>現賣（無法配對）</small><strong>{history.unmatched.length}</strong><span>不列入主表；不計算毛損益</span></div>
+        <div className="card history-pnl-summary"><small>可計算已實現毛損益</small>
+          <strong className={history.reliableGrossPnl>0?'history-gain':history.reliableGrossPnl<0?'history-loss':''}>
+            {history.reliableGrossPnl>0?'+':''}NT$ {number(history.reliableGrossPnl)}
+          </strong>
+          <span>{history.reliableSaleCount} 筆可計算；{history.uncertainSaleCount} 筆成本待確認，未計入</span>
+        </div>
       </div>
       <div className="history-toolbar">
         <label className="history-search"><Search size={17}/><input aria-label="搜尋股票" placeholder="搜尋股票代號、名稱或日期" value={search} onChange={e=>setSearch(e.target.value)}/></label>
@@ -107,7 +113,7 @@ export default function TradeHistoryPage(){
       <div className="history-table-heading"><h2>買賣交易表</h2><small>符合篩選的 {filtered.length} 筆／共 {history.included.length} 筆</small></div>
       <div className="history-table-scroll card">
         <table className="history-table">
-          <thead><tr><th>日期／時間</th><th>股票</th><th>類型</th><th>成交股數</th><th>每股成交價</th><th>成交價金</th><th>買進配對</th></tr></thead>
+          <thead><tr><th>日期／時間</th><th>股票</th><th>類型</th><th>成交股數</th><th>每股成交價</th><th>成交價金</th><th>已實現毛損益</th><th>買進配對</th></tr></thead>
           <tbody>{filtered.map(row=><tr key={row.id}>
             <td><b>{row.date}</b><small>{row.time}</small></td>
             <td><b>{row.name}</b><small>{row.symbol}</small></td>
@@ -115,14 +121,35 @@ export default function TradeHistoryPage(){
             <td className="num">{number(row.quantity)} 股</td>
             <td className="num">{number(row.price)}</td>
             <td className="num">{number(row.gross)}</td>
-            <td>{row.side==='buy'?<span className="history-mut">保留</span>:<button className="history-match" onClick={()=>setShowMatches(showMatches===row.id?null:row.id)}>{showMatches===row.id?'收起':'查看買進'} {showMatches===row.id?<ChevronUp size={13}/>:<ChevronDown size={13}/>}</button>}
-              {showMatches===row.id&&matches.has(row.id)&&<div className="history-match-detail">{matches.get(row.id)?.map((x,i)=><div key={i}>{x.date}：{number(x.quantity)} 股</div>)}</div>}
+            <td className="num">
+              {row.side==='buy'?<span className="history-mut">尚未實現</span>:
+               matches.get(row.id)?.reliable?
+               <div className="history-pnl">
+                 <b className={(matches.get(row.id)?.grossPnl||0)>0?'history-gain':(matches.get(row.id)?.grossPnl||0)<0?'history-loss':''}>
+                   {(matches.get(row.id)?.grossPnl||0)>0?'+':''}{number(matches.get(row.id)?.grossPnl||0)}
+                 </b>
+                 <small>毛報酬 {number((matches.get(row.id)?.grossRoi||0)*100)}%</small>
+               </div>:
+               <span className="history-uncertain">成本待確認</span>}
+            </td>
+            <td>{row.side==='buy'?<span className="history-mut">保留</span>:<button className="history-match" onClick={()=>setShowMatches(showMatches===row.id?null:row.id)}>
+              {showMatches===row.id?'收起明細':'配對與成本'} {showMatches===row.id?<ChevronUp size={13}/>:<ChevronDown size={13}/>}
+              </button>}
+              {showMatches===row.id&&matches.has(row.id)&&<div className="history-match-detail">
+                {matches.get(row.id)?.reliable?
+                  <div className="history-match-totals">賣出價金 {number(matches.get(row.id)?.proceeds||0)}－買入成本 {number(matches.get(row.id)?.cost||0)}＝毛損益 <b>{number(matches.get(row.id)?.grossPnl||0)}</b></div>:
+                  <div className="history-match-warning">{matches.get(row.id)?.reason} 下面僅供查看形式上的配對股數，不認列損益。</div>}
+                {matches.get(row.id)?.buys.map((x,i)=><div className="history-lot" key={x.id+'-'+i}>
+                  <b>{x.date}　買進 {number(x.quantity)} 股 @ {number(x.unitPrice)}</b>
+                  {matches.get(row.id)?.reliable&&<span>配對成本 {number(x.cost)} · 配對賣出 {number(x.proceeds)} · 毛損益 {x.grossPnl>0?'+':''}{number(x.grossPnl)}</span>}
+                </div>)}
+              </div>}
             </td>
           </tr>)}
-          {!filtered.length&&<tr><td colSpan={7} className="history-empty-cell">沒有符合條件的交易</td></tr>}</tbody>
+          {!filtered.length&&<tr><td colSpan={8} className="history-empty-cell">沒有符合條件的交易</td></tr>}</tbody>
         </table>
       </div>
-      <div className="history-disclaimer">成交價金來自富邦 Gmail 通知，不含實際手續費及交易稅；本頁不計算已實現損益、資產或現在持有股數。若有無法配對的賣出，不能把買進與賣出的差額視為真正庫存。</div>
+      <div className="history-disclaimer">本頁「毛損益」＝可配對現賣成交價金－對應 FIFO 買進成交成本，未扣實際手續費及交易稅；不是淨損益。計算起點是 2024 年，若先前有未知買進、定期定額缺漏或公司行動，真實成本可能不同。遇到同股票有無法配對的賣出，該事件之後的配對毛損益標示為「成本待確認」，不納入總計。本頁不計算資金餘額或實際庫存。</div>
       <section className="history-excluded card">
         <button className="history-expander" onClick={()=>setShowUnmatched(x=>!x)}>
           <span><b>無法配對的現賣</b><small>{history.unmatched.length} 筆 · 不納入交易主表，保留查核</small></span>
