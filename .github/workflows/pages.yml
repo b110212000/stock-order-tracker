@@ -37,3 +37,32 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Smoke-check live Pages HTTP and app assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          echo "Checking deployed URL: $BASE"
+          ready=0
+          for attempt in {1..12}; do
+            code=$(curl -L -sS -o /tmp/orderlead-index.html -w "%{http_code}" --max-time 15 -H "Cache-Control: no-cache" "${BASE}?check=${{ github.sha }}" || true)
+            echo "Home HTTP status attempt $attempt: $code"
+            if [ "$code" = "200" ] && grep -q "OrderLead" /tmp/orderlead-index.html; then
+              ready=1
+              break
+            fi
+            sleep 5
+          done
+          if [ "$ready" != "1" ]; then
+            echo "::error::Public homepage is not returning the deployed OrderLead HTML. Check GitHub Pages URL, DNS and Pages settings."
+            exit 1
+          fi
+          JS=$(grep -oE "/${{ github.event.repository.name }}/assets/[^\" ]+\.js" /tmp/orderlead-index.html | head -1)
+          CSS=$(grep -oE "/${{ github.event.repository.name }}/assets/[^\" ]+\.css" /tmp/orderlead-index.html | head -1)
+          [ -n "$JS" ] || { echo "::error::Entry JavaScript missing from index"; exit 1; }
+          [ -n "$CSS" ] || { echo "::error::Entry stylesheet missing from index"; exit 1; }
+          for target in "$JS" "$CSS" "/${{ github.event.repository.name }}/sw.js" "/${{ github.event.repository.name }}/repair.html"; do
+            echo "Checking $target"
+            curl -fLsS --max-time 20 -o /dev/null -w "HTTP %{http_code}; content-type %{content_type}\n" "https://${{ github.repository_owner }}.github.io${target}"
+          done
+
