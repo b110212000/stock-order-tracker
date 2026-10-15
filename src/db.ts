@@ -8,7 +8,7 @@ export const uid = () => crypto.randomUUID()
 export const now = () => new Date().toISOString()
 export const today = () => new Date().toLocaleDateString('sv-SE')
 
-function open(): Promise<IDBDatabase> {
+export function openOrderLeadDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION)
     request.onupgradeneeded = () => {
@@ -24,6 +24,7 @@ function open(): Promise<IDBDatabase> {
     request.onblocked = () => reject(new Error('資料庫正在被另一個分頁使用'))
   })
 }
+const open=openOrderLeadDB
 async function transaction<T>(store: Store, mode: IDBTransactionMode, fn: (object: IDBObjectStore) => IDBRequest<T>): Promise<T> {
   const db = await open()
   return new Promise((resolve, reject) => {

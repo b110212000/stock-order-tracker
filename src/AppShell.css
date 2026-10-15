@@ -21,3 +21,5 @@
   .review-shell .review-app-nav{padding:3px 9px calc(3px + env(safe-area-inset-bottom,0px))}
   .review-shell .review-app-nav .nav{font-size:11px;gap:4px;padding:5px 8px}
 }
+
+.review-shell .review-app-header .brand-logo{width:36px;height:36px;object-fit:cover;border-radius:10px;flex-shrink:0;box-shadow:0 2px 8px #09204324}

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
-import { ChevronRight, CloudDownload, Copy, FileDown, RefreshCcw, Share2, ShieldCheck } from 'lucide-react'
+import { ChevronRight, CloudDownload, Copy, DatabaseBackup, FileDown, RefreshCcw, Share2, ShieldCheck } from 'lucide-react'
 import './SettingsPage.css'
+import BackupPanel from './BackupPanel'
 
 type Props={
   version:string
@@ -15,6 +16,7 @@ type Props={
 }
 export default function SettingsPage({version,hasUpdate,checking,repairing,status,error,onCheck,onUpdate,onRepair}:Props){
   const [shareOpen,setShareOpen]=useState(false)
+  const [backupOpen,setBackupOpen]=useState(false)
   const [shareStatus,setShareStatus]=useState('')
   const linkRef=useRef<HTMLInputElement>(null)
   const url=new URL(import.meta.env.BASE_URL,window.location.origin).href
@@ -64,6 +66,14 @@ export default function SettingsPage({version,hasUpdate,checking,repairing,statu
           下載 <ChevronRight size={16}/>
         </a>
       </div>
+      <div className="settings-item">
+        <div className="settings-item-icon"><DatabaseBackup size={20}/></div>
+        <div className="settings-item-label"><strong>資料備份與轉移</strong><small>換機、還原交易與設定</small></div>
+        <button type="button" className="settings-action" aria-expanded={backupOpen} onClick={()=>setBackupOpen(v=>!v)}>
+          {backupOpen?'收合':'管理'} <ChevronRight size={16}/>
+        </button>
+      </div>
+      {backupOpen&&<BackupPanel version={version}/>}
       <div className="settings-item settings-version">
         <div className="settings-item-icon"><CloudDownload size={20}/></div>
         <div className="settings-item-label"><strong>版本更新</strong><small>目前 v{version}</small></div>

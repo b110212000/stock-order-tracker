@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Activity, ClipboardList, Settings2 } from 'lucide-react'
+import { ClipboardList, Settings2 } from 'lucide-react'
 import TradeHistoryPage from './TradeHistoryPage'
 import SettingsPage from './SettingsPage'
 import ErrorBoundary from './ErrorBoundary'
@@ -7,7 +7,7 @@ import './ErrorBoundary.css'
 import { updateSW } from './pwa'
 import { clearOrderLeadPwaCache, freshAppUrl } from './cache-repair'
 
-const VERSION='1.15.0'
+const VERSION='1.16.0'
 type Tab='trades'|'settings'
 
 /** Stage one: only trade ledger and minimal App settings are exposed. */
@@ -81,7 +81,7 @@ export default function App(){
   }
   return <div className="app review-shell">
     <header className="header review-app-header">
-      <div className="brand"><span className="brand-symbol"><Activity size={20}/></span><b>OrderLead</b></div>
+      <div className="brand"><img className="brand-logo" src={import.meta.env.BASE_URL+'icon-192.png'} alt="OrderLead" width={36} height={36}/><b>OrderLead</b></div>
     </header>
     <main className="main" id="app-main">
       <div className="content">
