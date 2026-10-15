@@ -38,8 +38,13 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editi
     const adjust=()=>{
       const layer=overlayRef.current
       if(!layer)return
-      layer.style.top=viewport?`${viewport.offsetTop}px`:'0px'
+      // On iOS, the visible area shrinks when the software keyboard opens.
+      // Use that region instead of laying the Save action beneath the keyboard.
+      layer.style.top=viewport?`${Math.max(0,viewport.offsetTop)}px`:'0px'
       layer.style.height=viewport?`${viewport.height}px`:'100dvh'
+      layer.classList.toggle('manual-keyboard-open',
+        !!viewport&&viewport.height<window.innerHeight*0.78)
+      layer.classList.toggle('manual-short-view',!!viewport&&viewport.height<430)
     }
     adjust()
     viewport?.addEventListener('resize',adjust)
@@ -77,7 +82,7 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editi
             <option value="buy">買進</option><option value="sell">賣出</option>
           </select>
         </label>
-        <div className="two-fields">
+        <div className="two-fields manual-date-row">
           <label className="form-label">成交日期
             <input type="date" value={draft.date} onChange={e=>set('date',e.target.value)} required/>
           </label>
@@ -85,7 +90,7 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editi
             <input type="time" value={draft.time} onChange={e=>set('time',e.target.value)} required/>
           </label>
         </div>
-        <div className="two-fields">
+        <div className="two-fields manual-stock-row">
           <label className="form-label">股票代號
             <input value={draft.symbol} onChange={e=>set('symbol',e.target.value)} placeholder="例如 2330" maxLength={8} autoCapitalize="characters" required/>
           </label>
@@ -93,7 +98,7 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editi
             <input value={draft.name} onChange={e=>set('name',e.target.value)} placeholder="例如 台積電" maxLength={100} required/>
           </label>
         </div>
-        <div className="two-fields">
+        <div className="two-fields manual-numeric-row">
           <label className="form-label">成交股數
             <input inputMode="numeric" type="number" value={draft.quantity} onChange={e=>set('quantity',e.target.value)} min={1} step={1} placeholder="例如 10" required/>
           </label>

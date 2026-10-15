@@ -40,3 +40,19 @@
   .settings-item-label small{font-size:10px}
   .settings-action{font-size:11px;padding-left:2px}
 }
+
+/* v1.16.4: isolate every settings row from its card width.
+   Avoid icon + long label + action forcing horizontal scrolling. */
+.settings-screen,.settings-list,.settings-item,.settings-item-label{box-sizing:border-box}
+.settings-screen .settings-item{width:100%;min-width:0}
+.settings-item-label{overflow-wrap:anywhere}
+.settings-action{min-width:0;max-width:45%;justify-content:flex-end;overflow-wrap:normal}
+.settings-status,.settings-alert{min-width:0;overflow-wrap:anywhere}
+@media(max-width:380px){
+  .settings-item{gap:7px;padding-inline:9px}
+  .settings-item-icon{width:32px;height:32px;flex-basis:32px}
+  .settings-item-label strong{font-size:12px}
+  .settings-item-label small{font-size:10px}
+  .settings-action{padding-left:0;font-size:11px}
+  .settings-version .settings-new{display:none}
+}

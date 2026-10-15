@@ -183,3 +183,43 @@
   .manual-fields-scroll{padding-top:10px;padding-bottom:10px}
   .manual-dialog-footer{padding:8px 16px}
 }
+
+/* v1.16.4: respect actual viewport width; do not force a long single-column
+   form onto every phone. The internal fields scroll, the Save action stays put. */
+.manual-overlay,.manual-overlay *{box-sizing:border-box}
+.manual-overlay .manual-trade-dialog.dialog.form-dialog,
+.manual-overlay .manual-trade-dialog form,
+.manual-fields-scroll,.manual-dialog-footer{min-width:0}
+.manual-overlay .manual-trade-dialog .manual-fields-scroll :is(input,select){
+  min-width:0;
+  width:100%;
+  max-width:100%;
+  font-size:16px;
+  -webkit-text-size-adjust:100%;
+}
+.manual-overlay .manual-dialog-footer{position:relative;z-index:1}
+.manual-overlay .manual-dialog-footer .primary{min-width:0}
+@media(min-width:375px) and (max-width:600px){
+  .manual-fields-scroll .two-fields{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+}
+@media(max-width:374px){
+  .manual-fields-scroll{padding-inline:14px}
+  .manual-fields-scroll .two-fields{grid-template-columns:minmax(0,1fr)}
+  .manual-dialog-footer{padding-inline:14px}
+}
+@media(max-height:470px){
+  .manual-overlay .manual-dialog-header{padding-block:5px}
+  .manual-overlay .manual-dialog-header h2{font-size:17px}
+  .manual-overlay .manual-fields-scroll{gap:9px;padding-top:8px;padding-bottom:8px}
+  .manual-overlay .manual-dialog-footer{padding-top:7px;padding-bottom:7px}
+  .manual-overlay .manual-dialog-footer .primary{min-height:42px}
+}
+.manual-overlay.manual-short-view .manual-dialog-header{padding-block:5px}
+.manual-overlay.manual-short-view .manual-fields-scroll{gap:9px;padding-top:8px;padding-bottom:8px}
+.manual-overlay.manual-short-view .manual-dialog-footer{padding-top:7px;padding-bottom:7px}
+.manual-overlay.manual-keyboard-open .manual-dialog-footer{
+  padding-bottom:10px;
+}

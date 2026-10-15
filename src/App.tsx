@@ -7,7 +7,7 @@ import './ErrorBoundary.css'
 import { updateSW } from './pwa'
 import { clearOrderLeadPwaCache, freshAppUrl } from './cache-repair'
 
-const VERSION='1.16.3'
+const VERSION='1.16.4'
 type Tab='trades'|'settings'
 
 /** Stage one: only trade ledger and minimal App settings are exposed. */
