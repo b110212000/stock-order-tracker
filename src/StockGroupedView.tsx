@@ -20,7 +20,7 @@ function StockCard({group}:{group:StockGroup}){
     <div className="grouped-stock-head">
       <div className="grouped-title">
         <div className="grouped-stock-avatar">{group.symbol}</div>
-        <div><h2>{group.name}</h2><span>{group.symbol} · {group.buys.length} 筆買進、{group.sells.length} 筆可配對賣出</span></div>
+        <div><h2>{group.name}</h2><span>{group.symbol} · 買 {group.buys.length} · 賣 {group.sells.length}</span></div>
       </div>
       <div className="grouped-head-actions">
         {collapsed&&<div className="grouped-collapsed-pnl" aria-label="已確認毛損益">
@@ -78,12 +78,12 @@ function StockCard({group}:{group:StockGroup}){
         </section>
       </div>
       <div className="grouped-stock-bottom">
-        <div><small>尚未配對賣出的買進股數</small><strong>{n(group.remainingQuantity)} 股</strong></div>
-        <div><small>尚未賣出部分的買進成本</small><strong>NT$ {n(group.remainingCost)}</strong></div>
-        <div><small>可確認賣出毛損益</small><strong className={gainClass(group.reliableGrossPnl)}>{group.reliableGrossPnl>0?'+':''}NT$ {n(group.reliableGrossPnl)}</strong></div>
+        <div><small>尚未賣出</small><strong>{n(group.remainingQuantity)} 股</strong></div>
+        <div><small>剩餘成本</small><strong>NT$ {n(group.remainingCost)}</strong></div>
+        <div><small>已確認毛損益</small><strong className={gainClass(group.reliableGrossPnl)}>{group.reliableGrossPnl>0?'+':''}NT$ {n(group.reliableGrossPnl)}</strong></div>
       </div>
-      {remainingWarning&&<p className="grouped-warning">這檔有 {group.unmatched.length} 筆無法配對的賣出：剩餘股數和成本只供核對，可能不是券商實際持股。</p>}
-      {group.uncertainSaleCount>0&&<p className="grouped-warning">另外有 {group.uncertainSaleCount} 筆形式上已配對的賣出仍待確認成本，沒有算進上方毛損益。</p>}
+      {remainingWarning&&<p className="grouped-warning">有 {group.unmatched.length} 筆賣出未配對，剩餘股數僅供參考。</p>}
+      {group.uncertainSaleCount>0&&<p className="grouped-warning">另有 {group.uncertainSaleCount} 筆成本待確認，未計入毛損益。</p>}
       {group.unmatched.length>0&&<div className="grouped-unmatched">
         <button type="button" onClick={()=>setShowUnmatched(x=>!x)}>
           {showUnmatched?'收合':'查看'} {group.unmatched.length} 筆無法配對的賣出
@@ -106,7 +106,7 @@ export default function StockGroupedView({groups}:{groups:StockGroup[]}){
   },[groups,search,sortMode])
   return <section className="grouped-view">
     <div className="grouped-toolbar">
-      <div><h2>個股買賣對照</h2><small>共 {groups.length} 檔 · 搜尋後 {visible.length} 檔</small></div>
+      <div><h2>我的股票</h2><small>{visible.length} 檔</small></div>
       <div className="grouped-filters">
         <label className="grouped-search"><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="搜尋個股或代號" aria-label="搜尋個股或代號"/></label>
         <label className="grouped-sort"><ArrowDownUp size={16}/>
@@ -116,9 +116,9 @@ export default function StockGroupedView({groups}:{groups:StockGroup[]}){
         </label>
       </div>
     </div>
-    <p className="grouped-explain">左邊是各筆買進，右邊是各筆可配對賣出；兩欄各自按時間排列，<b>相同高度不表示互相配對</b>。點右側「查看買進配對」才會標記對應的買進批次。收合時保留可確認的毛損益摘要，排序不影響 FIFO 配對。</p>
+    
     {visible.map(group=><StockCard key={group.symbol} group={group}/>)}
     {visible.length===0&&<div className="card grouped-empty">沒有找到符合搜尋條件的股票。</div>}
-    <p className="grouped-footnote">手動或匯入的交易皆按成交日期與時間 FIFO 配對。無法配對的賣出不會拿後續買進硬湊；剩餘股數為目前紀錄計算的「未配對買進量」，不是券商的實際持股。毛損益均未扣手續費與交易稅。</p>
+    <details className="grouped-more-info"><summary>計算說明</summary><p>依 FIFO（先買先賣）配對。毛損益未扣費稅；尚未賣出股數來自已記錄交易，可能與券商庫存不同。</p></details>
   </section>
 }

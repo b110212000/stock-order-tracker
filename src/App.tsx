@@ -1,16 +1,24 @@
 import { useEffect, useState } from 'react'
-import { Activity, RefreshCw, X } from 'lucide-react'
+import { Activity, ClipboardList, Settings2 } from 'lucide-react'
 import TradeHistoryPage from './TradeHistoryPage'
+import SettingsPage from './SettingsPage'
 import ErrorBoundary from './ErrorBoundary'
 import './ErrorBoundary.css'
 import { updateSW } from './pwa'
 import { clearOrderLeadPwaCache, freshAppUrl } from './cache-repair'
 
-/** Stage 1: Hide all unapproved modules, without deleting their code or IndexedDB data. */
+const VERSION='1.13.1'
+type Tab='trades'|'settings'
+
+/** Stage one: only trade ledger and minimal App settings are exposed. */
 export default function App(){
+  const [tab,setTab]=useState<Tab>('trades')
   const [refresh,setRefresh]=useState(false)
   const [repairBusy,setRepairBusy]=useState(false)
-  const [repairError,setRepairError]=useState('')
+  const [checkBusy,setCheckBusy]=useState(false)
+  const [settingsError,setSettingsError]=useState('')
+  const [settingsStatus,setSettingsStatus]=useState('')
+
   useEffect(()=>{
     const listener=()=>setRefresh(true)
     window.addEventListener('orderlead-update-ready',listener)
@@ -20,7 +28,7 @@ export default function App(){
     const media=matchMedia('(prefers-color-scheme: dark)')
     const apply=()=>{
       let stored:string|null=null
-      try{stored=localStorage.getItem('orderlead-theme')}catch{ /* private browsing restrictions */ }
+      try{stored=localStorage.getItem('orderlead-theme')}catch{ /* restricted mode */ }
       document.documentElement.dataset.theme=stored==='light'||stored==='dark'
         ?stored:(media.matches?'dark':'light')
     }
@@ -28,37 +36,79 @@ export default function App(){
     media.addEventListener('change',apply)
     return ()=>media.removeEventListener('change',apply)
   },[])
+  async function checkUpdate(){
+    if(checkBusy)return
+    setCheckBusy(true);setSettingsStatus('');setSettingsError('')
+    try{
+      if(!navigator.onLine)throw Error('目前沒有網路連線')
+      if(!('serviceWorker' in navigator))throw Error('瀏覽器不支援背景更新，請重新整理網站')
+      const scope=new URL(import.meta.env.BASE_URL,window.location.origin).href
+      const all=await navigator.serviceWorker.getRegistrations()
+      const reg=all.find(x=>x.scope===scope)
+      if(!reg) {
+        setSettingsStatus('目前沒有離線更新服務，請重新整理網站。')
+        return
+      }
+      await reg.update()
+      if(reg.waiting) {
+        setRefresh(true)
+        setSettingsStatus('發現新版，請按「立即更新」。')
+      } else {
+        setSettingsStatus('已檢查更新；如有新版，這裡會顯示更新提示。')
+      }
+    }catch(e){setSettingsError(e instanceof Error?e.message:String(e))}
+    finally{setCheckBusy(false)}
+  }
   async function repairPwa(){
     if(repairBusy)return
-    if(!window.confirm('確定要修復 App 更新嗎？系統只會清除 OrderLead 的離線快取並解除舊 Service Worker，不會刪除歷史交易、資金及其他本機資料。'))return
-    setRepairBusy(true);setRepairError('')
+    if(!window.confirm('清除 OrderLead 的離線快取並重新載入？交易紀錄與本機資料不會刪除。'))return
+    setRepairBusy(true);setSettingsError('');setSettingsStatus('')
     try{
       const result=await clearOrderLeadPwaCache()
-      if(result.failures.length) {
-        setRepairError(result.failures.join('；')+'。你仍可使用獨立修復頁重新嘗試。')
+      if(result.failures.length){
+        setSettingsError(result.failures.join('；'))
         return
       }
       window.location.replace(freshAppUrl())
-    }catch(error){
-      setRepairError('修復更新失敗：'+(error instanceof Error?error.message:String(error)))
-    }finally{setRepairBusy(false)}
+    }catch(e){setSettingsError(e instanceof Error?e.message:String(e))}
+    finally{setRepairBusy(false)}
+  }
+  function changeTab(next:Tab){
+    setTab(next)
+    setSettingsError('');setSettingsStatus('')
+    // Each screen owns a separate scroll container; return to its top on tab change.
+    document.querySelector('.review-shell .main')?.scrollTo({top:0})
   }
   return <div className="app review-shell">
-    <header className="header">
-      <div className="brand"><span className="brand-symbol"><Activity size={21}/></span><span><b>OrderLead</b><small>股票買賣紀錄</small></span></div>
-      <div className="review-header-actions">
-        <span className="review-status">第一關 · 交易紀錄</span>
-        <button className="review-repair-btn" disabled={repairBusy} onClick={()=>void repairPwa()} title="清除 OrderLead 離線快取，不刪除交易資料"><RefreshCw size={16}/><span>{repairBusy?'修復中…':'修復更新'}</span></button>
-      </div>
+    <header className="header review-app-header">
+      <div className="brand"><span className="brand-symbol"><Activity size={20}/></span><b>OrderLead</b></div>
     </header>
-    <main className="main"><div className="content">
-      {repairError&&<p className="error-msg" role="alert">{repairError} <a href={import.meta.env.BASE_URL+'repair.html'}>開啟獨立修復頁</a></p>}
-      <ErrorBoundary><TradeHistoryPage/></ErrorBoundary>
-      <footer className="footer">OrderLead · v1.13.0 · 其他功能暫時隱藏 · 非投資建議</footer>
-    </div></main>
-    {refresh&&<div className="update" role="status">
-      有新版本可更新 <button onClick={()=>updateSW(true)}>立即更新</button>
-      <button aria-label="關閉" onClick={()=>setRefresh(false)}><X size={17}/></button>
-    </div>}
+    <main className="main" id="app-main">
+      <div className="content">
+        <ErrorBoundary>
+          {tab==='trades'?
+            <TradeHistoryPage/>:
+            <SettingsPage
+              version={VERSION}
+              hasUpdate={refresh}
+              checking={checkBusy}
+              repairing={repairBusy}
+              status={settingsStatus}
+              error={settingsError}
+              onCheck={()=>void checkUpdate()}
+              onUpdate={()=>void updateSW(true)}
+              onRepair={()=>void repairPwa()}
+            />}
+        </ErrorBoundary>
+      </div>
+    </main>
+    <nav className="bottom-nav review-app-nav" aria-label="主要功能">
+      <button type="button" className={'nav '+(tab==='trades'?'active':'')} onClick={()=>changeTab('trades')} aria-current={tab==='trades'?'page':undefined}>
+        <ClipboardList size={21}/><span>交易</span>
+      </button>
+      <button type="button" className={'nav '+(tab==='settings'?'active':'')} onClick={()=>changeTab('settings')} aria-current={tab==='settings'?'page':undefined}>
+        <span className="review-settings-icon"><Settings2 size={21}/>{refresh&&<i className="review-update-dot" aria-label="有新版本"/>}</span><span>設定</span>
+      </button>
+    </nav>
   </div>
 }

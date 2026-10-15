@@ -84,3 +84,12 @@
   .grouped-sort{flex:1 1 100%;max-width:none}
   .grouped-sort select{width:100%}
 }
+
+/* Short, progressive disclosure rather than long instructions above every stock. */
+.grouped-more-info{font-size:11px;color:var(--sub);padding:2px 4px 12px}
+.grouped-more-info summary{cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:7px 1px;list-style:inside}
+.grouped-more-info p{margin:4px 0 0;font-size:11px;line-height:1.65;max-width:680px}
+.grouped-view{gap:11px}
+.grouped-toolbar h2{font-size:17px}
+.grouped-stock-head{padding:14px 16px}
+@media(max-width:700px){.grouped-stock-head{padding:12px 11px}}

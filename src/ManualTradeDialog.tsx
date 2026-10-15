@@ -37,7 +37,7 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false}:Prop
     <section className="dialog form-dialog manual-trade-dialog" role="dialog" aria-modal="true" aria-labelledby="manual-trade-title">
       <button className="close" type="button" onClick={onClose} disabled={busy} aria-label="關閉"><X size={20}/></button>
       <h2 id="manual-trade-title">{firstTrade?'新增第一筆交易':'手動新增交易'}</h2>
-      <p>沒有匯入檔也可以自己記錄。買進不需要先有持股；賣出則必須能配對已記錄的買進。</p>
+      
       <form onSubmit={e=>void submit(e)}>
         <label>交易方向
           <select value={draft.side} onChange={e=>set('side',e.target.value)} required>
@@ -69,7 +69,7 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false}:Prop
           </label>
         </div>
         {Number.isFinite(total)&&total>0&&<p className="manual-gross">成交價金（未計費用）：NT$ {new Intl.NumberFormat('zh-TW',{maximumFractionDigits:2}).format(total)}</p>}
-        <small className="manual-help">此階段僅紀錄成交價金，不估算手續費或交易稅；不會更新其他隱藏的資金資料。</small>
+        <small className="manual-help">費用與交易稅未納入計算。</small>
         {error&&<div className="error-msg" role="alert">{error}</div>}
         <button className="primary" type="submit" disabled={busy}>{busy?'正在儲存…':'確認新增交易'}</button>
       </form>
