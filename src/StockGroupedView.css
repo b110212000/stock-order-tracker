@@ -105,3 +105,43 @@
 .grouped-unmatched-row:last-child{border-bottom:0}
 .grouped-unmatched-row p{margin:0;flex:1;min-width:0}
 @media(max-width:700px){.grouped-trade-actions button{min-width:26px;min-height:28px;padding:4px}.grouped-trade-meta>span:first-child{font-size:10px}}
+
+/* Fix mobile transaction actions: a legacy mobile selector hides all spans
+ * inside .grouped-trade-meta, including the edit/delete action wrapper. */
+.grouped-view,.grouped-stock,.grouped-columns,.grouped-half,.grouped-trade{min-width:0;max-width:100%}
+@media(max-width:700px){
+  .grouped-trade-meta{display:flex;flex-wrap:wrap;gap:3px;min-width:0}
+  .grouped-trade-meta>span:first-child{
+    display:block;
+    flex:1 1 100%;
+    min-width:0;
+    font-size:11px;
+    overflow-wrap:anywhere;
+  }
+  .grouped-trade-meta .grouped-trade-actions{
+    display:flex;
+    flex:0 0 auto;
+    width:100%;
+    align-items:center;
+    justify-content:flex-end;
+    gap:3px;
+  }
+  .grouped-trade-actions button{
+    display:grid;
+    place-items:center;
+    width:36px;
+    height:36px;
+    min-width:36px;
+    min-height:36px;
+    padding:7px;
+  }
+  .grouped-unmatched-row .grouped-trade-actions{display:flex;width:auto}
+}
+@media(max-width:360px){
+  .grouped-half{padding:7px 5px;gap:6px}
+  .grouped-trade{padding:8px 5px;border-radius:8px}
+  .grouped-half-head small{display:none}
+  .grouped-title span{line-height:1.4;overflow-wrap:anywhere}
+  .grouped-stock-bottom{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+  .grouped-stock-bottom strong{font-size:12px}
+}

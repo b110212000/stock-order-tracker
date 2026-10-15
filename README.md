@@ -1,12 +1,18 @@
 # OrderLead — 台股訂單領先投資管理 PWA
 
-目前版本：**v1.16.2（手機交易表單與備份按鈕 RWD）**
+目前版本：**v1.16.3（修正手機逐筆交易編輯／刪除按鈕）**
 
 ## 網站
 
 https://b110212000.github.io/stock-order-tracker/
 
 React + Vite + TypeScript，GitHub Pages 部署；支援安裝 iPhone PWA、手機／桌面 RWD 及深色／淺色模式。
+
+## 手機交易卡片操作區修正（v1.16.3）
+
+- 修正手機交易卡片中舊 `.grouped-trade-meta span{display:none}` 同時隱藏編輯／刪除按鈕的問題，現在買進、賣出及無法配對的賣出都能看見操作按鈕。
+- 手機上日期改為獨立一行、操作按鈕每顆至少 36×36px；320px 以下減少內距，維持左買右賣且不溢出。
+- 純 UI 修復，既有資料、FIFO 和備份內容不受影響。
 
 ## 手機 RWD 修正（v1.16.2）
 
@@ -118,6 +124,7 @@ React + Vite + TypeScript，GitHub Pages 部署；支援安裝 iPhone PWA、手�
 - v1.16.0：設定新增完整本機資料備份與合併／取代轉移，含格式驗證、交易保護及交易筆數核對；PWA 圖示換成完整的藍色長條＋上升箭頭，支援 Apple Touch 和 Android maskable。
 - v1.16.1：修復外框兩列 CSS 覆蓋底部導覽，改為 viewport-locked 固定 Header、Bottom Bar 與中間滾動內容；交易和設定頁標題 sticky，支援 iPhone safe-area。
 - v1.16.2：交易新增/編輯表單改為手機全頁、表單內捲動、固定保存鍵、支援鍵盤 visualViewport；備份/還原按鈕及下拉式模式選單調整窄螢幕 RWD。
+- v1.16.3：手機買進／賣出明細的編輯與刪除按鈕恢復顯示，調整日期換行與窄螢幕點擊區。
 
 **尚未實作：即時或盤中行情 API、GPT 自動分析、跨裝置同步、背景通知及 Cloudflare 後端。** 這些功能需在 v2.0.0 另行規劃。
 
