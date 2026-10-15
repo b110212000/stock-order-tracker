@@ -1,6 +1,5 @@
 import type { Stock, Store, StoreValue, StagedTrade, Trade } from './types'
 import { WATCHLIST } from './data'
-import { selectRecoveredReviewRows } from './review-recovery'
 
 const DB_NAME = 'orderlead-local'
 const DB_VERSION = 4
@@ -222,43 +221,6 @@ export async function replaceReviewTrades(records: StagedTrade[]): Promise<void>
       tx.oncomplete=()=>resolve()
       tx.onerror=()=>reject(tx.error||Error('歷史交易更新失敗'))
       tx.onabort=()=>reject(tx.error||Error('歷史交易更新中斷'))
-    })
-  }finally{db.close()}
-}
-
-/** Stage-one migration: copy prior Gmail inbox rows into the isolated review store
- * ONLY if it is still empty. The old inbox, approved trades and all other stores
- * are never changed. Migration and reads share one IndexedDB transaction. */
-export async function readOrRecoverReviewTrades():Promise<{
-  rows:StagedTrade[]
-  recovered:number
-  ignored:number
-}>{
-  const db=await open()
-  try{
-    return await new Promise((resolve,reject)=>{
-      const tx=db.transaction(['reviewTrades','imports'],'readwrite')
-      const review=tx.objectStore('reviewTrades')
-      const historyReq=review.getAll()
-      const inboxReq=tx.objectStore('imports').getAll()
-      let historyReady=false,inboxReady=false
-      let output:{rows:StagedTrade[],recovered:number,ignored:number}={
-        rows:[],recovered:0,ignored:0
-      }
-      const apply=()=>{
-        if(!historyReady||!inboxReady)return
-        const chosen=selectRecoveredReviewRows(
-          historyReq.result as StagedTrade[],
-          inboxReq.result as StagedTrade[]
-        )
-        if(chosen.recovered>0)for(const row of chosen.rows)review.put(row)
-        output=chosen
-      }
-      historyReq.onsuccess=()=>{historyReady=true;apply()}
-      inboxReq.onsuccess=()=>{inboxReady=true;apply()}
-      tx.oncomplete=()=>resolve(output)
-      tx.onerror=()=>reject(tx.error||Error('歷史交易資料讀取失敗'))
-      tx.onabort=()=>reject(tx.error||Error('歷史交易資料恢復中斷'))
     })
   }finally{db.close()}
 }

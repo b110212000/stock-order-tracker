@@ -1,10 +1,10 @@
 import { strFromU8, unzipSync } from 'fflate'
-import { readTradePreview } from './import-trades'
+import { readAnyTradePreview } from './import-trades'
 import type { SourceTrade } from './import-trades'
 
 export const MAX_IMPORT_BYTES = 10 * 1024 * 1024
 
-/** Offline parsing; no Gmail API or server upload. Both JSON and ZIP are supported. */
+/** Offline parsing; no Gmail API or server upload. Both JSON and ZIP are supported; generic and legacy schemas are recognized. */
 export function parseTradeImportBytes(bytes:Uint8Array, filename:string):SourceTrade[]{
   if(bytes.length===0||bytes.length>MAX_IMPORT_BYTES)throw Error('檔案為空，或大小超過 10 MB')
   const zip=/\.zip$/i.test(filename)
@@ -23,7 +23,7 @@ export function parseTradeImportBytes(bytes:Uint8Array, filename:string):SourceT
     }
     if(content.length>MAX_IMPORT_BYTES)throw Error('解壓後 JSON 超過 10 MB')
     const parsed:unknown=JSON.parse(strFromU8(content))
-    return readTradePreview(parsed)
+    return readAnyTradePreview(parsed)
   }catch(e){
     if(e instanceof SyntaxError)throw Error('JSON 內容無法解析，請確認下載的是交易匯入檔')
     throw e

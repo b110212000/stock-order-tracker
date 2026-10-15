@@ -28,7 +28,7 @@ export default defineConfig({
       workbox: {
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/\/repair\.html(?:$|\?)/],
-        globPatterns: ['**/*.{js,css,html,png,svg,webmanifest}']
+        globPatterns: ['**/*.{js,css,html,json,png,svg,webmanifest}']
       }
     })
   ]

@@ -53,3 +53,64 @@ export function roughShortfalls(source: {date:string,time?:string,symbol:string,
  }
  return errors
 }
+
+/** Public import template format for any user / broker.
+ * The legacy Gmail schema remains readable for existing downloaded files,
+ * but is no longer required for new imports. */
+export function readAnyTradePreview(json:unknown):SourceTrade[]{
+  if(isRecord(json)&&json.format==='orderlead-gmail-trades')return readTradePreview(json)
+  if(!isRecord(json)||json.format!=='orderlead-trades'||json.schema!==1||!Array.isArray(json.records))
+    throw Error('請使用 OrderLead 交易匯入範例 JSON')
+  if(!json.records.length||json.records.length>10000)
+    throw Error('交易筆數須為 1～10,000 筆')
+  const ids=new Set<string>()
+  return json.records.map((value:unknown,i:number)=>{
+    const row=i+1
+    if(!isRecord(value))throw Error('第 '+row+' 筆交易格式錯誤')
+    const v=value
+    if(typeof v.date!=='string'||!ymd(v.date))throw Error('第 '+row+' 筆日期錯誤，須為 YYYY-MM-DD')
+    if(typeof v.symbol!=='string'||!/^[a-zA-Z0-9]{4,8}$/.test(v.symbol)||
+       typeof v.name!=='string'||!v.name.trim()||v.name.length>100)
+      throw Error('第 '+row+' 筆股票代號或名稱錯誤')
+    if(v.side!=='buy'&&v.side!=='sell')throw Error('第 '+row+' 筆 side 須填 buy 或 sell')
+    if(!num(v.quantity)||!Number.isSafeInteger(v.quantity)||v.quantity<=0||
+       !num(v.price)||v.price<=0||v.price>10000000)
+      throw Error('第 '+row+' 筆股數或價格不正確')
+    const time=v.time===undefined?'09:00:00':v.time
+    if(typeof time!=='string'||!/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(time))
+      throw Error('第 '+row+' 筆時間錯誤，須為 HH:mm 或 HH:mm:ss')
+    const normalizedTime=time.length===5?time+':00':time
+    const expectedGross=Math.round(v.quantity*v.price*100)/100
+    const gross=v.gross===undefined?expectedGross:v.gross
+    if(!num(gross)||gross<=0||!Number.isSafeInteger(Math.round(gross*100))||
+       Math.abs(gross-v.quantity*v.price)>1.01)
+      throw Error('第 '+row+' 筆成交價金與股數、價格不一致')
+    const fee=v.fee===undefined?null:v.fee
+    const tax=v.tax===undefined?null:v.tax
+    if(fee!==null&&(!num(fee)||fee<0))throw Error('第 '+row+' 筆手續費錯誤')
+    if(tax!==null&&(!num(tax)||tax<0))throw Error('第 '+row+' 筆交易稅錯誤')
+    const canonical=JSON.stringify([v.date,normalizedTime,v.symbol.toUpperCase(),v.name.trim(),
+      v.side,v.quantity,v.price,gross])
+    // Stable, two independent non-cryptographic hashes + occurrence index.
+    // Reimporting the identical file will produce the identical IDs and skip duplicates.
+    let hashA=2166136261,hashB=5381
+    for(let j=0;j<canonical.length;j++){
+      const ch=canonical.charCodeAt(j)
+      hashA=Math.imul(hashA^ch,16777619)>>>0
+      hashB=(Math.imul(hashB,33)^ch)>>>0
+    }
+    const generated='orderlead-import:'+hashA.toString(16).padStart(8,'0')+
+      hashB.toString(16).padStart(8,'0')+':'+i
+    const id=v.id===undefined?generated:v.id
+    if(typeof id!=='string'||!(/^[a-zA-Z0-9:._-]{1,100}$/.test(id))||ids.has(id))
+      throw Error('第 '+row+' 筆交易 ID 重複或不正確')
+    ids.add(id)
+    const orderId=v.orderId===undefined?'file':v.orderId
+    if(typeof orderId!=='string'||orderId.length>40)throw Error('第 '+row+' 筆委託單號錯誤')
+    return {
+      id,date:v.date,time:normalizedTime,symbol:v.symbol.toUpperCase(),
+      name:v.name.trim(),side:v.side,quantity:v.quantity,
+      price:v.price,gross,orderId,fee,tax,feeStatus:'unverified'
+    } as SourceTrade
+  })
+}

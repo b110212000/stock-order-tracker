@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FileUp, Inbox, Plus, X } from 'lucide-react'
-import { addManualReviewTrade, list, mergeReviewTrades, readOrRecoverReviewTrades, uid, now } from './db'
+import { addManualReviewTrade, list, mergeReviewTrades, uid, now } from './db'
 import { parseTradeImportBytes, MAX_IMPORT_BYTES } from './import-file'
 import { organizeGmailHistory } from './gmail-history'
 import { groupTradesByStock } from './stock-groups'
@@ -27,16 +27,9 @@ export default function TradeHistoryPage(){
   },[])
   useEffect(()=>{
     let active=true
-    readOrRecoverReviewTrades()
-      .then(({rows,recovered,ignored})=>{
-        if(!active)return
-        setRows(rows)
-        if(recovered>0){
-          setMessage('已接續原有的交易紀錄（'+recovered+' 筆）；舊資料完整保留。'+
-            (ignored>0?'其中 '+ignored+' 筆格式不符，未複製。':''))
-        }
-      })
-      .catch(e=>{if(active)setError('讀取歷史交易失敗：'+(e instanceof Error?e.message:String(e))+'。原有資料仍保留，請先重新載入頁面。')})
+    list<StagedTrade>('reviewTrades')
+      .then(saved=>{if(active)setRows(saved)})
+      .catch(e=>{if(active)setError('讀取交易紀錄失敗：'+(e instanceof Error?e.message:String(e)))})
       .finally(()=>{if(active)setLoading(false)})
     return ()=>{active=false}
   },[])
@@ -57,17 +50,6 @@ export default function TradeHistoryPage(){
       setMessage('成功匯入 '+result.added+' 筆；'+result.duplicates+' 筆來源已存在，沒有重複加入。原有交易及其他資料均保留。')
     }catch(e){setError('讀取失敗：'+(e instanceof Error?e.message:String(e)))}
     finally{setWorking(false);if(picker.current)picker.current.value=''}
-  }
-  async function usePreviousInbox(){
-    setWorking(true);setError('');setMessage('')
-    try{
-      const existing=await list<StagedTrade>('imports')
-      if(!existing.length)throw Error('找不到先前暫存的匯入紀錄')
-      const result=await mergeReviewTrades(existing)
-      await refresh()
-      setMessage('已合併舊暫存 '+result.added+' 筆；'+result.duplicates+' 筆重複跳過。既有手動交易保留。')
-    }catch(e){setError(e instanceof Error?e.message:String(e))}
-    finally{setWorking(false)}
   }
   async function saveManual(input:ManualTradeInput){
     const draft=buildManualTrade(input,uid(),now())
@@ -102,7 +84,6 @@ export default function TradeHistoryPage(){
       <div className="history-empty-icon"><Inbox size={27}/></div>
       <h2>還沒有交易紀錄</h2>
       <p>從「新增」開始，或匯入交易檔。</p>
-      <button type="button" className="history-recover" disabled={working} onClick={()=>void usePreviousInbox()}>找回舊版匯入</button>
     </div>}
     {(message||error)&&<div className={'history-toast '+(error?'history-toast-error':'')} role={error?'alert':'status'}>
       <span>{error||message}</span>

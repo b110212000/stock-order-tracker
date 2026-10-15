@@ -1,4 +1,4 @@
-import { ChevronRight, CloudDownload, RefreshCcw, ShieldCheck } from 'lucide-react'
+import { ChevronRight, CloudDownload, FileDown, RefreshCcw, ShieldCheck } from 'lucide-react'
 import './SettingsPage.css'
 
 type Props={
@@ -16,6 +16,13 @@ export default function SettingsPage({version,hasUpdate,checking,repairing,statu
   return <section className="settings-screen" aria-labelledby="settings-title">
     <h1 id="settings-title">設定</h1>
     <div className="settings-list card">
+      <div className="settings-item">
+        <div className="settings-item-icon"><FileDown size={20}/></div>
+        <div className="settings-item-label"><strong>匯入範例</strong><small>交易 JSON 格式</small></div>
+        <a className="settings-action" href={import.meta.env.BASE_URL+'trade-import-example.json'} download="OrderLead_交易匯入範例.json">
+          下載 <ChevronRight size={16}/>
+        </a>
+      </div>
       <div className="settings-item settings-version">
         <div className="settings-item-icon"><CloudDownload size={20}/></div>
         <div className="settings-item-label"><strong>版本更新</strong><small>目前 v{version}</small></div>
