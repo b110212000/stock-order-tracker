@@ -40,6 +40,13 @@ function validate(store:Store, entries:unknown[]): StoreValue[] {
    case 'snapshots':
     if(!dated(raw.date)||!finite(raw.equity)||!finite(raw.cumulativeNetDeposits)||!txt(raw.capturedAt))throw Error('snapshots 欄位錯誤')
     result.push(raw as AssetSnapshot);break
+   case 'imports':
+    if(!txt(raw.symbol)||!txt(raw.name)||!dated(raw.date)||!['buy','sell'].includes(String(raw.side))||
+       !Number.isSafeInteger(raw.quantity)||!finite(raw.price)||!finite(raw.gross)||!txt(raw.orderId)||
+       !txt(raw.time)||!txt(raw.createdAt)||!txt(raw.importedAt)||
+       !['pending','approved','skipped'].includes(String(raw.status))||
+       !(raw.fee===null||nonNeg(raw.fee))||!(raw.tax===null||nonNeg(raw.tax)))throw Error('imports 欄位不完整')
+    result.push(raw as StoreValue);break
   }
  }
  return result

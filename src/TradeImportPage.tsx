@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, CheckCheck, CheckCircle2, CircleAlert, FileJson, FileUp, Pencil, ShieldAlert, X } from 'lucide-react'
-import { list, save, saveMany, approveImportedTrade } from './db'
+import { list, save, saveMany, approveImportedTrade, replacePendingImports, clearImportInbox } from './db'
 import { dollars, calculateTrades } from './trade-calc'
-import { readTradePreview, roughShortfalls, toStaged } from './import-trades'
+import { roughShortfalls, toStaged } from './import-trades'
+import { parseTradeImportBytes, MAX_IMPORT_BYTES } from './import-file'
 import type { SourceTrade, } from './import-trades'
 import type { StagedTrade, Trade } from './types'
 import './TradeImportPage.css'
@@ -27,33 +28,58 @@ export default function TradeImportPage({onBack,onRefresh}:{onBack:()=>void,onRe
   setExisting(trades)
  },[])
  useEffect(()=>{reload().catch(e=>setError(String(e)))},[reload])
- const ids=new Set(staged.map(s=>s.id))
+ const ids=new Set([...staged.map(s=>s.id),...existing.filter(t=>t.id.startsWith('gmail:')).map(t=>t.id.slice(6))])
  const duplicates=incoming.filter(s=>ids.has(s.id)).length
  const pending=staged.filter(s=>s.status==='pending')
  const confirmed=staged.filter(s=>s.status==='approved')
+ const skipped=staged.filter(s=>s.status==='skipped')
  const pendingShortfalls=useMemo(()=>roughShortfalls(staged),[staged])
  const visible=(showAll?staged:pending).slice(offset,offset+25)
  async function chooseFile(file:File){
-  setError('');setInfo('');setIncoming([])
+  setBusy(true);setError('');setInfo('');setIncoming([])
   try{
-   if(file.size>10*1024*1024)throw Error('JSON 超過 10 MB')
-   const parsed=readTradePreview(JSON.parse(await file.text()))
+   if(file.size>MAX_IMPORT_BYTES)throw Error('匯入檔大於 10 MB，請選擇較小的檔案')
+   const parsed=parseTradeImportBytes(new Uint8Array(await file.arrayBuffer()),file.name)
    setIncoming(parsed)
-   setInfo('解析成功：'+parsed.length+' 筆，請確認內容後再按「暫存交易」。不會立即改動庫存。')
-  }catch(e){setError(String(e instanceof Error?e.message:e))}
-  if(input.current)input.current.value=''
+   setInfo('成功讀取 '+parsed.length+' 筆。若之前已暫存舊版 176 筆，請使用「取代舊待核對」，不必一筆筆略過。')
+  }catch(e){setError('無法匯入「'+file.name+'」：'+(e instanceof Error?e.message:String(e)))}
+  finally{setBusy(false);if(input.current)input.current.value=''}
  }
  async function stage(){
   if(!incoming.length)return
   setBusy(true);setError('')
   try{
-   const current=await list<StagedTrade>('imports')
-   const existing=new Set(current.map(x=>x.id))
-   const rows=toStaged(incoming).filter(x=>!existing.has(x.id))
+   const [current,formal]=await Promise.all([list<StagedTrade>('imports'),list<Trade>('trades')])
+   const existingIds=new Set([...current.map(x=>x.id),...formal.filter(t=>t.id.startsWith('gmail:')).map(t=>t.id.slice(6))])
+   const rows=toStaged(incoming).filter(x=>!existingIds.has(x.id))
    await saveMany('imports',rows)
-   setIncoming([]);setInfo('新增 '+rows.length+' 筆待核對交易，略過 '+(incoming.length-rows.length)+' 筆重複紀錄。不會影響正式持股。')
+   setIncoming([]);setOffset(0)
+   setInfo('成功新增 '+rows.length+' 筆待核對交易，略過 '+(incoming.length-rows.length)+' 筆已存在紀錄。原有暫存不會被刪除。')
    await reload()
-  }catch(e){setError(String(e))}finally{setBusy(false)}
+  }catch(e){setError('合併匯入失敗：'+(e instanceof Error?e.message:String(e)))}finally{setBusy(false)}
+ }
+ async function replaceStaging(){
+  if(!incoming.length||busy)return
+  const count=staged.filter(row=>row.status!=='approved').length
+  if(!confirm('將以這份 '+incoming.length+' 筆的新檔案取代 '+count+' 筆舊的「待核對／略過」暫存。已核准的正式交易及其他資產資料不會刪除。確定繼續？'))return
+  setBusy(true);setError('')
+  try{
+   const result=await replacePendingImports(toStaged(incoming))
+   setIncoming([]);setOffset(0);setShowAll(false)
+   setInfo('已清除 '+result.cleared+' 筆舊暫存，重新載入 '+result.inserted+' 筆；保留 '+result.retainedApproved+' 筆已核准來源。正式持股沒有被修改。')
+   await reload()
+  }catch(e){setError('重新匯入失敗：'+(e instanceof Error?e.message:String(e)))}finally{setBusy(false)}
+ }
+ async function clearStaging(){
+  if(!staged.length||busy)return
+  if(!confirm('確定清空全部 '+staged.length+' 筆「匯入清單」？這會清掉待核對、略過與已核准的暫存標記，但不會刪除正式交易、持股、資金或觀察資料。'))return
+  setBusy(true);setError('')
+  try{
+   await clearImportInbox()
+   setIncoming([]);setShowAll(false);setOffset(0)
+   await reload()
+   setInfo('匯入暫存已全部清空。正式交易與績效資料未刪除。可以重新選 JSON 或 ZIP 匯入。')
+  }catch(e){setError('清空暫存失敗：'+(e instanceof Error?e.message:String(e)))}finally{setBusy(false)}
  }
  async function persistFee(){
   if(!editing)return
@@ -85,28 +111,32 @@ export default function TradeImportPage({onBack,onRefresh}:{onBack:()=>void,onRe
  }
  return <section className="gmail-import">
   <button className="linkish back-link" onClick={onBack}><ArrowLeft size={17}/> 返回交易紀錄</button>
-  <div className="section"><h2>首次匯入券商交易</h2><small>v1.8.0 · 本機處理</small></div>
+  <div className="section"><h2>首次匯入券商交易</h2><small>本機處理 · 不會同步到雲端</small></div>
   <div className="notice"><ShieldAlert size={19}/> Gmail 檔案只在你的裝置解析及暫存；本功能不會連接 Gmail API、不會傳到 GitHub，也不會覆蓋其他投資資料。</div>
   <div className="import-overview">
     <div className="card"><strong>{pending.length}</strong><small>待核對</small></div>
     <div className="card"><strong>{confirmed.length}</strong><small>已核准匯入</small></div>
-    <div className="card"><strong>{staged.filter(x=>x.fee===null||x.tax===null).length}</strong><small>費用未確認</small></div>
+    <div className="card"><strong>{skipped.length}</strong><small>已略過</small></div>
   </div>
   <div className="card import-upload">
-   <FileJson size={25}/><div><b>匯入 OrderLead Gmail 交易預覽 JSON</b><p>選取本次 ChatGPT 產出的 <code>orderlead_gmail_trade_preview_2021-2026.json</code>，檢查筆數後存入「待核對」。</p></div>
+   <FileJson size={25}/><div><b>匯入 Gmail 成交紀錄（JSON / ZIP）</b><p>可直接選先前下載的 <code>orderlead_import.zip</code> 或 <code>orderlead_matched.json</code>。ZIP 會在手機本機解壓，不會上傳伺服器。</p></div>
    <button className="primary" onClick={()=>input.current?.click()} disabled={busy}><FileUp size={16}/> 選擇檔案</button>
-   <input ref={input} type="file" accept=".json,application/json" hidden onChange={e=>{const file=e.target.files?.[0];if(file)void chooseFile(file)}}/>
+   <input ref={input} type="file" accept=".json,.zip,application/json,application/zip,application/x-zip-compressed" hidden onChange={e=>{const file=e.target.files?.[0];if(file)void chooseFile(file)}}/>
   </div>
   {incoming.length>0&&<div className="card import-preview">
-    <h3>匯入前預覽</h3><p>共 {incoming.length} 筆，已有 {duplicates} 筆來源 ID 存在；剩下 {incoming.length-duplicates} 筆可加入待核對清單。</p>
+    <h3>匯入前預覽</h3><p>新檔 {incoming.length} 筆，已有 {duplicates} 筆存在。可「合併」或「取代舊待核對」；後者會清除不在新檔的舊版暫存。</p>
     <p className="field-help">所有尚未取得實際費用的資料，手續費與證交稅保留為「未知」，不會先填成 0。</p>
     <ul>{incoming.slice(0,8).map(r=><li key={r.id}>{r.date}　{r.symbol}　{r.side==='buy'?'買':'賣'} {r.quantity} 股 @ {dollars(r.price)}</li>)}</ul>
-    <button className="primary" disabled={busy} onClick={()=>void stage()}>確認暫存 {incoming.length-duplicates} 筆</button>
+    <div className="action-bar import-preview-actions">
+      <button className="mini-button" disabled={busy||incoming.length===duplicates} onClick={()=>void stage()}>合併新增 {incoming.length-duplicates} 筆</button>
+      <button className="primary" disabled={busy} onClick={()=>void replaceStaging()}>取代舊待核對 · {incoming.length} 筆</button>
+    </div>
   </div>}
   {error&&<div className="error-msg" role="alert">{error}</div>}
   {info&&<p className="notice" role="status"><CheckCircle2 size={18}/>{info}</p>}
   {pendingShortfalls.length>0&&<div className="import-warning"><CircleAlert size={18}/><p>這批郵件仍有 {pendingShortfalls.length} 處「歷史買進股數不足」的跡象（可能缺信、其他券商、ETF 分割或公司行動）。請勿在未補齊成本基礎前核准有問題的賣出紀錄。</p></div>}
   <div className="section"><h2>郵件交易核對清單</h2><div className="action-bar"><button className="primary" disabled={busy||pending.length===0} onClick={()=>{setShowBulk(true);setError('')}}><CheckCheck size={16}/> 一鍵批次核對</button><button className="mini-button" onClick={()=>{setShowAll(!showAll);setOffset(0)}}>{showAll?'只看待核對':'查看全部'}</button></div></div>
+  {staged.length>0&&<div className="import-clean-row"><span className="field-help">之前匯入的資料一直卡住？可以清空匯入清單再重新開始；已核准的正式交易會保留。</span><button className="mini-button import-danger" disabled={busy} onClick={()=>void clearStaging()}>一鍵清空暫存（{staged.length} 筆）</button></div>}
   <p className="field-help">待核對資料不會影響總覽、持股與績效。可按「一鍵批次核對」先預覽通過數量與例外股票，指定費用處理方式再核准。預估費用不等於交割實際值；異常股票仍待核對。也可逐筆核對實際手續費。</p>
   <div className="stack">{visible.map(row=><div className="item-row staged-row" key={row.id}>
    <div><b>{row.name} · {row.symbol} <span className={row.side==='buy'?'text-good':'text-bad'}>{row.side==='buy'?'買入':'賣出'}</span></b>

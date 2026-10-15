@@ -150,3 +150,55 @@ export async function approveImportedTrades(updates: StagedTrade[], trades: Trad
     })
   }finally{db.close()}
 }
+
+/** Replace only unapproved Gmail staging rows in one IndexedDB transaction.
+ * Approved staging and all formal trades survive, and the formal IDs are never restaged. */
+export async function replacePendingImports(rows: StagedTrade[]): Promise<{cleared:number,inserted:number,retainedApproved:number}> {
+  const seen=new Set<string>()
+  for(const item of rows){
+    if(item.status!=='pending'||seen.has(item.id))throw Error('匯入資料重複或狀態異常')
+    seen.add(item.id)
+  }
+  const db=await open()
+  try{
+    return await new Promise((resolve,reject)=>{
+      const tx=db.transaction(['imports','trades'],'readwrite')
+      const imports=tx.objectStore('imports')
+      const currentReq=imports.getAll()
+      const tradesReq=tx.objectStore('trades').getAll()
+      let haveImports=false,haveTrades=false,stats={cleared:0,inserted:0,retainedApproved:0}
+      const proceed=()=>{
+        if(!haveImports||!haveTrades)return
+        const current=currentReq.result as StagedTrade[]
+        const formal=tradesReq.result as Trade[]
+        const protectedIds=new Set(current.filter(x=>x.status==='approved').map(x=>x.id))
+        for(const t of formal)if(t.id.startsWith('gmail:'))protectedIds.add(t.id.slice(6))
+        stats.retainedApproved=protectedIds.size
+        for(const item of current)if(item.status!=='approved'){imports.delete(item.id);stats.cleared++}
+        for(const item of rows){
+          if(protectedIds.has(item.id))continue
+          imports.put(item);stats.inserted++
+        }
+      }
+      currentReq.onsuccess=()=>{haveImports=true;proceed()}
+      tradesReq.onsuccess=()=>{haveTrades=true;proceed()}
+      tx.oncomplete=()=>resolve(stats)
+      tx.onerror=()=>reject(tx.error||Error('重新匯入失敗'))
+      tx.onabort=()=>reject(tx.error||Error('重新匯入失敗，原資料保留'))
+    })
+  }finally{db.close()}
+}
+
+/** Remove the import inbox only. It does NOT remove any approved formal trades. */
+export async function clearImportInbox():Promise<void>{
+  const db=await open()
+  try{
+    await new Promise<void>((resolve,reject)=>{
+      const tx=db.transaction('imports','readwrite')
+      tx.objectStore('imports').clear()
+      tx.oncomplete=()=>resolve()
+      tx.onerror=()=>reject(tx.error||Error('清理匯入暫存失敗'))
+      tx.onabort=()=>reject(tx.error||Error('清理匯入暫存失敗'))
+    })
+  }finally{db.close()}
+}
