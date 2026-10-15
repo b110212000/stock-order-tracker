@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
-import { ChevronDown, ChevronUp, Search } from 'lucide-react'
+import { ArrowDownUp, ChevronDown, ChevronUp, Search } from 'lucide-react'
 import type { StockGroup } from './stock-groups'
+import { sortStockGroups, STOCK_SORT_OPTIONS } from './stock-sorting'
+import type { StockSortMode } from './stock-sorting'
 import './StockGroupedView.css'
 
 const n=(x:number)=>new Intl.NumberFormat('zh-TW',{maximumFractionDigits:2}).format(x)
@@ -12,15 +14,25 @@ function StockCard({group}:{group:StockGroup}){
   const selected=group.sells.find(s=>s.row.id===selectedSale)
   const linkedIds=new Set(selected?.match.buys.map(b=>b.id)||[])
   const remainingWarning=group.uncertainInventory
+  const hasReliableSale=group.sells.length>group.uncertainSaleCount
+  const hasUncertain=group.uncertainSaleCount>0||group.unmatched.length>0
   return <article className="card grouped-stock">
     <div className="grouped-stock-head">
       <div className="grouped-title">
         <div className="grouped-stock-avatar">{group.symbol}</div>
         <div><h2>{group.name}</h2><span>{group.symbol} · {group.buys.length} 筆買進、{group.sells.length} 筆可配對賣出</span></div>
       </div>
-      <button type="button" className="grouped-collapse" onClick={()=>setCollapsed(x=>!x)} aria-expanded={!collapsed}>
-        {collapsed?'展開':'收合'} {collapsed?<ChevronDown size={16}/>:<ChevronUp size={16}/>}
-      </button>
+      <div className="grouped-head-actions">
+        {collapsed&&<div className="grouped-collapsed-pnl" aria-label="已確認毛損益">
+          <small>已確認毛損益{hasUncertain?' · 部分待核對':''}</small>
+          {hasReliableSale?<strong className={gainClass(group.reliableGrossPnl)}>
+            {group.reliableGrossPnl>0?'+':''}NT$ {n(group.reliableGrossPnl)}
+          </strong>:<strong className="grouped-no-pnl">—</strong>}
+        </div>}
+        <button type="button" className="grouped-collapse" onClick={()=>setCollapsed(x=>!x)} aria-expanded={!collapsed}>
+          {collapsed?'展開':'收合'} {collapsed?<ChevronDown size={16}/>:<ChevronUp size={16}/>}
+        </button>
+      </div>
     </div>
     {!collapsed&&<>
       <div className="grouped-columns">
@@ -86,16 +98,25 @@ function StockCard({group}:{group:StockGroup}){
 }
 export default function StockGroupedView({groups}:{groups:StockGroup[]}){
   const [search,setSearch]=useState('')
+  const [sortMode,setSortMode]=useState<StockSortMode>('code-asc')
   const visible=useMemo(()=>{
     const q=search.trim().toLowerCase()
-    return groups.filter(g=>!q||(g.symbol+' '+g.name).toLowerCase().includes(q))
-  },[groups,search])
+    const filtered=groups.filter(g=>!q||(g.symbol+' '+g.name).toLowerCase().includes(q))
+    return sortStockGroups(filtered,sortMode)
+  },[groups,search,sortMode])
   return <section className="grouped-view">
     <div className="grouped-toolbar">
       <div><h2>個股買賣對照</h2><small>共 {groups.length} 檔 · 搜尋後 {visible.length} 檔</small></div>
-      <label className="grouped-search"><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="搜尋個股或代號" aria-label="搜尋個股或代號"/></label>
+      <div className="grouped-filters">
+        <label className="grouped-search"><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="搜尋個股或代號" aria-label="搜尋個股或代號"/></label>
+        <label className="grouped-sort"><ArrowDownUp size={16}/>
+          <select value={sortMode} onChange={e=>setSortMode(e.target.value as StockSortMode)} aria-label="個股排序方式">
+            {STOCK_SORT_OPTIONS.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}
+          </select>
+        </label>
+      </div>
     </div>
-    <p className="grouped-explain">左邊是各筆買進，右邊是各筆可配對賣出；兩欄各自按時間排列，<b>相同高度不表示互相配對</b>。點右側「查看買進配對」才會標記對應的買進批次。</p>
+    <p className="grouped-explain">左邊是各筆買進，右邊是各筆可配對賣出；兩欄各自按時間排列，<b>相同高度不表示互相配對</b>。點右側「查看買進配對」才會標記對應的買進批次。收合時保留可確認的毛損益摘要，排序不影響 FIFO 配對。</p>
     {visible.map(group=><StockCard key={group.symbol} group={group}/>)}
     {visible.length===0&&<div className="card grouped-empty">沒有找到符合搜尋條件的股票。</div>}
     <p className="grouped-footnote">資料起點為 2024 年。未配對賣出不會拿後續買進硬湊；剩餘股數是本次郵件紀錄依 FIFO 推算的「未配對買進量」，不是銀行／券商實際庫存。毛損益均未扣手續費與交易稅。</p>

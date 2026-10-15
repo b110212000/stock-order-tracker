@@ -54,7 +54,7 @@ export default function App(){
     <main className="main"><div className="content">
       {repairError&&<p className="error-msg" role="alert">{repairError} <a href={import.meta.env.BASE_URL+'repair.html'}>開啟獨立修復頁</a></p>}
       <ErrorBoundary><TradeHistoryPage/></ErrorBoundary>
-      <footer className="footer">OrderLead · v1.11.0 · 其他功能暫時隱藏 · 非投資建議</footer>
+      <footer className="footer">OrderLead · v1.12.0 · 其他功能暫時隱藏 · 非投資建議</footer>
     </div></main>
     {refresh&&<div className="update" role="status">
       有新版本可更新 <button onClick={()=>updateSW(true)}>立即更新</button>
