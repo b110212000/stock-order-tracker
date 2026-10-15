@@ -1,13 +1,21 @@
 import { useMemo, useState } from 'react'
-import { ArrowDownUp, ChevronDown, ChevronUp, Search } from 'lucide-react'
+import { ArrowDownUp, ChevronDown, ChevronUp, Pencil, Search, Trash2 } from 'lucide-react'
 import type { StockGroup } from './stock-groups'
+import type { StagedTrade } from './types'
 import { sortStockGroups, STOCK_SORT_OPTIONS } from './stock-sorting'
 import type { StockSortMode } from './stock-sorting'
 import './StockGroupedView.css'
 
 const n=(x:number)=>new Intl.NumberFormat('zh-TW',{maximumFractionDigits:2}).format(x)
 const gainClass=(v:number)=>v>0?'grouped-profit':v<0?'grouped-loss':''
-function StockCard({group}:{group:StockGroup}){
+type TradeActions={onEdit:(row:StagedTrade)=>void,onDelete:(row:StagedTrade)=>void}
+function RowActions({row,onEdit,onDelete}:TradeActions&{row:StagedTrade}){
+  return <span className="grouped-trade-actions">
+    <button type="button" onClick={()=>onEdit(row)} aria-label={'編輯 '+row.name+' '+(row.side==='buy'?'買進':'賣出')+'交易'} title="編輯"><Pencil size={13}/></button>
+    <button type="button" className="grouped-delete" onClick={()=>onDelete(row)} aria-label={'刪除 '+row.name+' '+(row.side==='buy'?'買進':'賣出')+'交易'} title="刪除"><Trash2 size={13}/></button>
+  </span>
+}
+function StockCard({group,onEdit,onDelete}:{group:StockGroup}&TradeActions){
   const [collapsed,setCollapsed]=useState(false)
   const [selectedSale,setSelectedSale]=useState<string|null>(null)
   const [showUnmatched,setShowUnmatched]=useState(false)
@@ -40,7 +48,7 @@ function StockCard({group}:{group:StockGroup}){
           <div className="grouped-half-head"><span>買進</span><small>依成交日期</small></div>
           {group.buys.length===0&&<div className="grouped-no-trades">尚無可用買進紀錄</div>}
           {group.buys.map(b=><div key={b.row.id} className={'grouped-trade '+(linkedIds.has(b.row.id)?'grouped-linked':'')}>
-            <div className="grouped-trade-meta">{b.row.date}<span>{b.row.time}</span></div>
+            <div className="grouped-trade-meta"><span>{b.row.date}</span><RowActions row={b.row} onEdit={onEdit} onDelete={onDelete}/></div>
             <div className="grouped-trade-value">買 {n(b.row.quantity)} 股</div>
             <div className="grouped-trade-sub">單價 {n(b.row.price)}</div>
             <div className="grouped-trade-cost">成本 NT$ {n(b.row.gross)}</div>
@@ -52,7 +60,7 @@ function StockCard({group}:{group:StockGroup}){
           <div className="grouped-half-head"><span>賣出</span><small>依成交日期</small></div>
           {group.sells.length===0&&<div className="grouped-no-trades">尚無可完整配對的賣出</div>}
           {group.sells.map(s=><div key={s.row.id} className={'grouped-trade '+(selectedSale===s.row.id?'grouped-selected':'')}>
-            <div className="grouped-trade-meta">{s.row.date}<span>{s.row.time}</span></div>
+            <div className="grouped-trade-meta"><span>{s.row.date}</span><RowActions row={s.row} onEdit={onEdit} onDelete={onDelete}/></div>
             <div className="grouped-trade-value">賣 {n(s.row.quantity)} 股</div>
             <div className="grouped-trade-sub">單價 {n(s.row.price)}</div>
             <div className="grouped-trade-cost">成交 NT$ {n(s.row.gross)}</div>
@@ -89,14 +97,15 @@ function StockCard({group}:{group:StockGroup}){
           {showUnmatched?'收合':'查看'} {group.unmatched.length} 筆無法配對的賣出
           {showUnmatched?<ChevronUp size={14}/>:<ChevronDown size={14}/>}
         </button>
-        {showUnmatched&&group.unmatched.map(x=><p key={x.row.id}>
-          {x.row.date}　賣 {n(x.row.quantity)} 股 · 當時可用買進 {n(x.available)} 股 · 不足 {n(x.missing)} 股（未計入）
-        </p>)}
+        {showUnmatched&&group.unmatched.map(x=><div className="grouped-unmatched-row" key={x.row.id}>
+          <p>{x.row.date} · 賣 {n(x.row.quantity)} 股 · 缺 {n(x.missing)} 股（未計入）</p>
+          <RowActions row={x.row} onEdit={onEdit} onDelete={onDelete}/>
+        </div>)}
       </div>}
     </>}
   </article>
 }
-export default function StockGroupedView({groups}:{groups:StockGroup[]}){
+export default function StockGroupedView({groups,onEdit,onDelete}:{groups:StockGroup[]}&TradeActions){
   const [search,setSearch]=useState('')
   const [sortMode,setSortMode]=useState<StockSortMode>('code-asc')
   const visible=useMemo(()=>{
@@ -117,7 +126,7 @@ export default function StockGroupedView({groups}:{groups:StockGroup[]}){
       </div>
     </div>
     
-    {visible.map(group=><StockCard key={group.symbol} group={group}/>)}
+    {visible.map(group=><StockCard key={group.symbol} group={group} onEdit={onEdit} onDelete={onDelete}/>)}
     {visible.length===0&&<div className="card grouped-empty">沒有找到符合搜尋條件的股票。</div>}
     <details className="grouped-more-info"><summary>計算說明</summary><p>依 FIFO（先買先賣）配對。毛損益未扣費稅；尚未賣出股數來自已記錄交易，可能與券商庫存不同。</p></details>
   </section>

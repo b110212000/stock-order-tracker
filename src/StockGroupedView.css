@@ -93,3 +93,15 @@
 .grouped-toolbar h2{font-size:17px}
 .grouped-stock-head{padding:14px 16px}
 @media(max-width:700px){.grouped-stock-head{padding:12px 11px}}
+
+/* Per-transaction edit/delete actions */
+.grouped-trade-meta{align-items:center;flex-wrap:nowrap;gap:4px}
+.grouped-trade-meta>span:first-child{flex:1;min-width:0;font-variant-numeric:tabular-nums}
+.grouped-trade-actions{display:inline-flex;align-items:center;gap:1px;flex-shrink:0}
+.grouped-trade-actions button{min-width:28px;min-height:28px;display:inline-grid;place-items:center;border:0;border-radius:8px;background:transparent;color:var(--sub);padding:5px}
+.grouped-trade-actions button:hover,.grouped-trade-actions button:focus-visible{background:var(--lightblue);color:var(--blue)}
+.grouped-trade-actions .grouped-delete:hover,.grouped-trade-actions .grouped-delete:focus-visible{background:#ffebe8;color:#ad3d38}
+.grouped-unmatched-row{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 0;border-bottom:1px solid var(--border)}
+.grouped-unmatched-row:last-child{border-bottom:0}
+.grouped-unmatched-row p{margin:0;flex:1;min-width:0}
+@media(max-width:700px){.grouped-trade-actions button{min-width:26px;min-height:28px;padding:4px}.grouped-trade-meta>span:first-child{font-size:10px}}

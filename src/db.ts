@@ -269,3 +269,40 @@ export async function addManualReviewTrade(row:StagedTrade):Promise<void>{
     })
   }finally{db.close()}
 }
+
+/** Optimistic, atomic mutation scoped strictly to the first-step review store.
+ * This is intentionally separate from actual holdings and cash stores.
+ * The expected snapshot is rechecked inside the SAME write transaction to
+ * prevent changing a record after another tab modified its FIFO inputs. */
+export async function mutateReviewTrade(
+  expectedRows:StagedTrade[],targetId:string,updated:StagedTrade|null
+):Promise<void>{
+  if(updated&&updated.id!==targetId)throw Error('編輯交易的識別碼不符')
+  const db=await open()
+  try{
+    await new Promise<void>((resolve,reject)=>{
+      const tx=db.transaction('reviewTrades','readwrite')
+      const store=tx.objectStore('reviewTrades')
+      const read=store.getAll()
+      let cause=''
+      read.onsuccess=()=>{
+        const current=read.result as StagedTrade[]
+        if(JSON.stringify(current)!==JSON.stringify(expectedRows)){
+          cause='交易資料已在其他畫面變更，請重新整理再試'
+          tx.abort()
+          return
+        }
+        if(!current.some(row=>row.id===targetId)){
+          cause='找不到指定交易，請重新整理'
+          tx.abort()
+          return
+        }
+        if(updated)store.put(updated)
+        else store.delete(targetId)
+      }
+      tx.oncomplete=()=>resolve()
+      tx.onabort=()=>reject(Error(cause||'交易修改中斷，原始資料未更動'))
+      tx.onerror=()=>reject(tx.error||Error('交易修改失敗'))
+    })
+  }finally{db.close()}
+}

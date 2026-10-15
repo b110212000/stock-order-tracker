@@ -2,12 +2,14 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { X } from 'lucide-react'
 import type { ManualTradeInput } from './manual-review-trades'
+import type { StagedTrade } from './types'
 import './ManualTradeDialog.css'
 
 type Props={
   onSave:(draft:ManualTradeInput)=>Promise<void>
   onClose:()=>void
   firstTrade?:boolean
+  editing?:StagedTrade
 }
 function localDate(){
   const now=new Date()
@@ -18,8 +20,12 @@ function localTime(){
   const d=new Date()
   return [d.getHours(),d.getMinutes()].map(n=>String(n).padStart(2,'0')).join(':')
 }
-export default function ManualTradeDialog({onSave,onClose,firstTrade=false}:Props){
-  const [draft,setDraft]=useState<ManualTradeInput>({
+export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editing}:Props){
+  const [draft,setDraft]=useState<ManualTradeInput>(editing?{
+    date:editing.date,time:editing.time.slice(0,5),symbol:editing.symbol,
+    name:editing.name,side:editing.side,
+    quantity:String(editing.quantity),price:String(editing.price)
+  }:{
     date:localDate(),time:localTime(),symbol:'',name:'',side:'buy',quantity:'',price:''
   })
   const [busy,setBusy]=useState(false)
@@ -36,7 +42,7 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false}:Prop
   return <div className="overlay manual-overlay" role="presentation">
     <section className="dialog form-dialog manual-trade-dialog" role="dialog" aria-modal="true" aria-labelledby="manual-trade-title">
       <button className="close" type="button" onClick={onClose} disabled={busy} aria-label="關閉"><X size={20}/></button>
-      <h2 id="manual-trade-title">{firstTrade?'新增第一筆交易':'手動新增交易'}</h2>
+      <h2 id="manual-trade-title">{editing?'編輯交易':firstTrade?'新增第一筆交易':'新增交易'}</h2>
       
       <form onSubmit={e=>void submit(e)}>
         <label>交易方向
@@ -71,7 +77,7 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false}:Prop
         {Number.isFinite(total)&&total>0&&<p className="manual-gross">成交價金（未計費用）：NT$ {new Intl.NumberFormat('zh-TW',{maximumFractionDigits:2}).format(total)}</p>}
         <small className="manual-help">費用與交易稅未納入計算。</small>
         {error&&<div className="error-msg" role="alert">{error}</div>}
-        <button className="primary" type="submit" disabled={busy}>{busy?'正在儲存…':'確認新增交易'}</button>
+        <button className="primary" type="submit" disabled={busy}>{busy?'儲存中…':editing?'儲存修改':'新增交易'}</button>
       </form>
     </section>
   </div>

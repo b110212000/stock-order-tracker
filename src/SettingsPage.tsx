@@ -1,4 +1,5 @@
-import { ChevronRight, CloudDownload, FileDown, RefreshCcw, ShieldCheck } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { ChevronRight, CloudDownload, Copy, FileDown, RefreshCcw, Share2, ShieldCheck } from 'lucide-react'
 import './SettingsPage.css'
 
 type Props={
@@ -13,9 +14,49 @@ type Props={
   onRepair:()=>void
 }
 export default function SettingsPage({version,hasUpdate,checking,repairing,status,error,onCheck,onUpdate,onRepair}:Props){
+  const [shareOpen,setShareOpen]=useState(false)
+  const [shareStatus,setShareStatus]=useState('')
+  const linkRef=useRef<HTMLInputElement>(null)
+  const url=new URL(import.meta.env.BASE_URL,window.location.origin).href
+  async function shareApp(){
+    setShareStatus('')
+    if(typeof navigator.share==='function'){
+      try{
+        await navigator.share({title:'OrderLead',text:'OrderLead 股票交易紀錄 App',url})
+        return
+      }catch(e){
+        if(e instanceof Error&&e.name==='AbortError')return
+      }
+    }
+    setShareOpen(true)
+  }
+  async function copyLink(){
+    try{
+      if(!navigator.clipboard?.writeText)throw Error('unsupported')
+      await navigator.clipboard.writeText(url)
+      setShareStatus('已複製連結')
+    }catch{
+      linkRef.current?.select()
+      setShareStatus('請長按網址複製')
+    }
+  }
   return <section className="settings-screen" aria-labelledby="settings-title">
     <h1 id="settings-title">設定</h1>
     <div className="settings-list card">
+      <div className="settings-item">
+        <div className="settings-item-icon"><Share2 size={20}/></div>
+        <div className="settings-item-label"><strong>分享 App</strong><small>分享給朋友</small></div>
+        <button type="button" className="settings-action" onClick={()=>void shareApp()}>
+          分享 <ChevronRight size={16}/>
+        </button>
+      </div>
+      {shareOpen&&<div className="settings-share-content">
+        <label className="settings-share-link"><input ref={linkRef} value={url} onFocus={e=>e.currentTarget.select()} readOnly aria-label="App 分享網址"/>
+          <button type="button" onClick={()=>void copyLink()} aria-label="複製 App 連結"><Copy size={16}/>複製</button>
+        </label>
+        {shareStatus&&<span className="settings-share-result" role="status">{shareStatus}</span>}
+        <details className="settings-install-tip"><summary>安裝到 iPhone 主畫面</summary><p>用 Safari 開啟網址，點分享 <Share2 size={13}/>，再選「加入主畫面」。</p></details>
+      </div>}
       <div className="settings-item">
         <div className="settings-item-icon"><FileDown size={20}/></div>
         <div className="settings-item-label"><strong>匯入範例</strong><small>交易 JSON 格式</small></div>
