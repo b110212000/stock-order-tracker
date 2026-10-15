@@ -79,3 +79,12 @@ test('editing an imported row preserves execution seconds and broker gross when 
  assert.equal(edited.fee,5)
  assert.equal(edited.tax,0)
 })
+
+test('changing a buy into an unsupported sell requires a shortage warning',()=>{
+ const buy=tx('first','2025-01-01','buy',10,100)
+ const changed=editedReviewTrade(buy,draft('2025-01-01','sell',10,100))
+ const impact=assessReviewMutation([buy],buy.id,changed)
+ assert.equal(impact.newlyUnmatched,1)
+ assert.equal(impact.shortageShares,10)
+ assert.match(mutationPrompt(buy,'edit',impact),/無法配對/)
+})

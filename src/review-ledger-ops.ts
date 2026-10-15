@@ -44,8 +44,12 @@ export function assessReviewMutation(
   if(next)updated.push(next)
   const after=organizeGmailHistory(updated)
   const oldMatched=new Map(old.matchedSales.map(x=>[x.id,x]))
+  const oldUnmatched=new Set(old.unmatched.map(x=>x.row.id))
   const afterMatched=new Map(after.matchedSales.map(x=>[x.id,x]))
-  const converted=after.unmatched.filter(x=>oldMatched.has(x.row.id))
+  // Also flag an edited BUY turned into an uncovered SELL, not only
+  // previously matched sales losing their FIFO source.
+  const converted=after.unmatched.filter(x=>
+    !oldUnmatched.has(x.row.id)&&(oldMatched.has(x.row.id)||x.row.id===targetId))
   const recalculatedSales=[...oldMatched.entries()].filter(([id,prior])=>{
     if(id===targetId&&!next)return false
     const current=afterMatched.get(id)
@@ -66,7 +70,7 @@ export function mutationPrompt(row:StagedTrade,action:'delete'|'edit',impact:Rev
   const heading=(action==='delete'?'刪除':'修改')+' '+row.name+' '+(row.side==='buy'?'買進':'賣出')+' '+row.quantity+' 股？'
   const effects=[
     impact.newlyUnmatched>0?
-      '注意：會有 '+impact.newlyUnmatched+' 筆原本可配對的賣出變成缺少買進來源（不足 '+impact.shortageShares+' 股），相關毛損益將不再認列。':'',
+      '注意：會有 '+impact.newlyUnmatched+' 筆賣出變成無法配對（不足 '+impact.shortageShares+' 股），相關毛損益將不再認列。':'',
     impact.recalculatedSales>0?'會重新計算 '+impact.recalculatedSales+' 筆賣出的 FIFO 配對／毛損益。':''
   ].filter(Boolean)
   return heading+(effects.length?'\n\n'+effects.join('\n'):'')+
