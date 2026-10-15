@@ -1,15 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, CheckCircle2, CircleAlert, FileJson, FileUp, Pencil, ShieldAlert, X } from 'lucide-react'
+import { ArrowLeft, CheckCheck, CheckCircle2, CircleAlert, FileJson, FileUp, Pencil, ShieldAlert, X } from 'lucide-react'
 import { list, save, saveMany, approveImportedTrade } from './db'
 import { dollars, calculateTrades } from './trade-calc'
 import { readTradePreview, roughShortfalls, toStaged } from './import-trades'
 import type { SourceTrade, } from './import-trades'
 import type { StagedTrade, Trade } from './types'
 import './TradeImportPage.css'
+import BulkApprovalDialog from './BulkApprovalDialog'
+import './BulkApprovalDialog.css'
 
 export default function TradeImportPage({onBack,onRefresh}:{onBack:()=>void,onRefresh:()=>void}){
  const input=useRef<HTMLInputElement>(null)
  const [staged,setStaged]=useState<StagedTrade[]>([])
+ const [existing,setExisting]=useState<Trade[]>([])
+ const [showBulk,setShowBulk]=useState(false)
  const [incoming,setIncoming]=useState<SourceTrade[]>([])
  const [busy,setBusy]=useState(false)
  const [error,setError]=useState('')
@@ -17,7 +21,11 @@ export default function TradeImportPage({onBack,onRefresh}:{onBack:()=>void,onRe
  const [editing,setEditing]=useState<StagedTrade|null>(null)
  const [showAll,setShowAll]=useState(false)
  const [offset,setOffset]=useState(0)
- const reload=useCallback(async()=>{setStaged((await list<StagedTrade>('imports')).sort((a,b)=>b.date.localeCompare(a.date)||b.time.localeCompare(a.time)))},[])
+ const reload=useCallback(async()=>{
+  const [rows,trades]=await Promise.all([list<StagedTrade>('imports'),list<Trade>('trades')])
+  setStaged(rows.sort((a,b)=>b.date.localeCompare(a.date)||b.time.localeCompare(a.time)))
+  setExisting(trades)
+ },[])
  useEffect(()=>{reload().catch(e=>setError(String(e)))},[reload])
  const ids=new Set(staged.map(s=>s.id))
  const duplicates=incoming.filter(s=>ids.has(s.id)).length
@@ -52,7 +60,7 @@ export default function TradeImportPage({onBack,onRefresh}:{onBack:()=>void,onRe
   const fees=editing.fee,tax=editing.tax
   if(fees===null||tax===null||!Number.isFinite(fees)||fees<0||!Number.isFinite(tax)||tax<0){setError('請填寫非負的手續費與交易稅，未知費用不能直接視為零。');return}
   if(editing.side==='sell' && fees+tax>=editing.quantity*editing.price){setError('賣出費用不能超過成交金額');return}
-  try{await save('imports',editing);setEditing(null);setError('');await reload();setInfo('費用已標記為手動核對，還需要按「確認寫入」才能加入正式交易。')}catch(e){setError(String(e))}
+  try{await save('imports',{...editing,feeStatus:'verified'});setEditing(null);setError('');await reload();setInfo('費用已標記為手動核對，還需要按「確認寫入」才能加入正式交易。')}catch(e){setError(String(e))}
  }
  async function approve(row:StagedTrade){
   setError('');setInfo('')
@@ -77,7 +85,7 @@ export default function TradeImportPage({onBack,onRefresh}:{onBack:()=>void,onRe
  }
  return <section className="gmail-import">
   <button className="linkish back-link" onClick={onBack}><ArrowLeft size={17}/> 返回交易紀錄</button>
-  <div className="section"><h2>首次匯入券商交易</h2><small>v1.7.0 · 本機處理</small></div>
+  <div className="section"><h2>首次匯入券商交易</h2><small>v1.8.0 · 本機處理</small></div>
   <div className="notice"><ShieldAlert size={19}/> Gmail 檔案只在你的裝置解析及暫存；本功能不會連接 Gmail API、不會傳到 GitHub，也不會覆蓋其他投資資料。</div>
   <div className="import-overview">
     <div className="card"><strong>{pending.length}</strong><small>待核對</small></div>
@@ -98,8 +106,8 @@ export default function TradeImportPage({onBack,onRefresh}:{onBack:()=>void,onRe
   {error&&<div className="error-msg" role="alert">{error}</div>}
   {info&&<p className="notice" role="status"><CheckCircle2 size={18}/>{info}</p>}
   {pendingShortfalls.length>0&&<div className="import-warning"><CircleAlert size={18}/><p>這批郵件仍有 {pendingShortfalls.length} 處「歷史買進股數不足」的跡象（可能缺信、其他券商、ETF 分割或公司行動）。請勿在未補齊成本基礎前核准有問題的賣出紀錄。</p></div>}
-  <div className="section"><h2>郵件交易核對清單</h2><button className="mini-button" onClick={()=>{setShowAll(!showAll);setOffset(0)}}>{showAll?'只看待核對':'查看全部'}</button></div>
-  <p className="field-help">待核對資料不會影響總覽、持股與績效。按「核對費用」手動輸入交割實際費用，再按「確認寫入」逐筆通過庫存驗證。</p>
+  <div className="section"><h2>郵件交易核對清單</h2><div className="action-bar"><button className="primary" disabled={busy||pending.length===0} onClick={()=>{setShowBulk(true);setError('')}}><CheckCheck size={16}/> 一鍵批次核對</button><button className="mini-button" onClick={()=>{setShowAll(!showAll);setOffset(0)}}>{showAll?'只看待核對':'查看全部'}</button></div></div>
+  <p className="field-help">待核對資料不會影響總覽、持股與績效。可按「一鍵批次核對」先預覽通過數量與例外股票，指定費用處理方式再核准。預估費用不等於交割實際值；異常股票仍待核對。也可逐筆核對實際手續費。</p>
   <div className="stack">{visible.map(row=><div className="item-row staged-row" key={row.id}>
    <div><b>{row.name} · {row.symbol} <span className={row.side==='buy'?'text-good':'text-bad'}>{row.side==='buy'?'買入':'賣出'}</span></b>
     <small>{row.date} {row.time} · {row.quantity} 股 × {dollars(row.price)} 元 · 委託 {row.orderId}</small>
@@ -119,6 +127,11 @@ export default function TradeImportPage({onBack,onRefresh}:{onBack:()=>void,onRe
    <small>{(showAll?staged:pending).length?Math.floor(offset/25)+1:0} / {Math.ceil((showAll?staged:pending).length/25)} 頁</small>
    <button className="mini-button" disabled={offset+25>=(showAll?staged:pending).length} onClick={()=>setOffset(offset+25)}>下一頁</button>
   </div>
+  {showBulk&&<BulkApprovalDialog staged={staged} existing={existing} onClose={()=>setShowBulk(false)} onImported={(count,blocked,estimated)=>{
+      setShowBulk(false);setOffset(0)
+      setInfo('批次核准 '+count+' 筆；'+blocked+' 筆因費用或庫存等問題暫留待核對。'+(estimated?'其中 '+estimated+' 筆費用為預估，請依交割單校正。':''))
+      void reload();onRefresh()
+    }}/>}
   {editing&&<div className="overlay" onMouseDown={e=>{if(e.target===e.currentTarget)setEditing(null)}}><section className="dialog form-dialog" role="dialog" aria-modal="true" aria-label="核對交割費用"><button className="close" onClick={()=>setEditing(null)} aria-label="關閉"><X/></button>
    <h2>核對 {editing.symbol} 交易費用</h2><p className="field-help">{editing.date} · {editing.side==='buy'?'買':'賣'} {editing.quantity} 股 · 成交價金 NT$ {dollars(editing.gross)}。請使用券商交割資料，而非成交回報的未扣費價金。</p>
    <form onSubmit={e=>{e.preventDefault();void persistFee()}}>

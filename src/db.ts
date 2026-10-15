@@ -125,3 +125,28 @@ export async function approveImportedTrade(staged: StagedTrade, trade: Trade): P
     })
   } finally { db.close() }
 }
+
+export async function approveImportedTrades(updates: StagedTrade[], trades: Trade[]): Promise<void> {
+  if (!trades.length || updates.length !== trades.length) throw Error('批次核准資料筆數異常')
+  const ids=new Set<string>()
+  for(let i=0;i<trades.length;i++){
+    if(trades[i].id!=='gmail:'+updates[i].id || updates[i].status!=='approved' || ids.has(trades[i].id))
+      throw Error('批次核准來源識別碼錯誤或重複')
+    ids.add(trades[i].id)
+  }
+  const db=await open()
+  try{
+    await new Promise<void>((resolve,reject)=>{
+      const tx=db.transaction(['imports','trades'],'readwrite')
+      const tradesStore=tx.objectStore('trades')
+      const importsStore=tx.objectStore('imports')
+      for(let i=0;i<trades.length;i++){
+        tradesStore.add(trades[i])
+        importsStore.put(updates[i])
+      }
+      tx.oncomplete=()=>resolve()
+      tx.onerror=()=>reject(tx.error||Error('批次交易寫入失敗'))
+      tx.onabort=()=>reject(tx.error||Error('批次交易寫入中止'))
+    })
+  }finally{db.close()}
+}
