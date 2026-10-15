@@ -4,8 +4,10 @@
   "version": "1.16.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/generate-icons.cjs",
     "dev": "vite --host 0.0.0.0",
     "typecheck": "tsc --noEmit",
+    "prebuild": "node scripts/generate-icons.cjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "test": "tsx --test tests/*.test.ts"
