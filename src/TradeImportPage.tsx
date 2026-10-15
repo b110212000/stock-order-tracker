@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, CheckCircle2, CircleAlert, FileJson, FileUp, Pencil, ShieldAlert, X } from 'lucide-react'
-import { list, save } from './db'
+import { list, save, saveMany, approveImportedTrade } from './db'
 import { dollars, calculateTrades } from './trade-calc'
 import { readTradePreview, roughShortfalls, toStaged } from './import-trades'
 import type { SourceTrade, } from './import-trades'
@@ -42,7 +42,7 @@ export default function TradeImportPage({onBack,onRefresh}:{onBack:()=>void,onRe
    const current=await list<StagedTrade>('imports')
    const existing=new Set(current.map(x=>x.id))
    const rows=toStaged(incoming).filter(x=>!existing.has(x.id))
-   for(const x of rows)await save('imports',x)
+   await saveMany('imports',rows)
    setIncoming([]);setInfo('新增 '+rows.length+' 筆待核對交易，略過 '+(incoming.length-rows.length)+' 筆重複紀錄。不會影響正式持股。')
    await reload()
   }catch(e){setError(String(e))}finally{setBusy(false)}
@@ -66,8 +66,7 @@ export default function TradeImportPage({onBack,onRefresh}:{onBack:()=>void,onRe
     quantity:row.quantity,price:row.price,fee:row.fee,tax:row.tax,
     note:'富邦成交回報；委託 '+row.orderId+'；'+row.name+'；已手動核對費用',createdAt:row.createdAt}
    calculateTrades([...current,asTrade])
-   await save('trades',asTrade)
-   await save('imports',{...row,status:'approved'})
+   await approveImportedTrade(row,asTrade)
    setInfo(row.date+' '+row.symbol+' 已核准寫入正式交易；更新持股與績效。')
    await reload();onRefresh()
   }catch(e){setError(String(e instanceof Error?e.message:e))}finally{setBusy(false)}
