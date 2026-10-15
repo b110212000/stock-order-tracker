@@ -41,6 +41,7 @@ function validate(store:Store, entries:unknown[]): StoreValue[] {
     if(!dated(raw.date)||!finite(raw.equity)||!finite(raw.cumulativeNetDeposits)||!txt(raw.capturedAt))throw Error('snapshots 欄位錯誤')
     result.push(raw as AssetSnapshot);break
    case 'imports':
+   case 'reviewTrades':
     if(!txt(raw.symbol)||!txt(raw.name)||!dated(raw.date)||!['buy','sell'].includes(String(raw.side))||
        !Number.isSafeInteger(raw.quantity)||!finite(raw.price)||!finite(raw.gross)||!txt(raw.orderId)||
        !txt(raw.time)||!txt(raw.createdAt)||!txt(raw.importedAt)||
@@ -75,7 +76,7 @@ export default function BackupPage(){
    if(!obj(parsed)||parsed.format!=='orderlead-backup'||parsed.schema!==1||!obj(parsed.data))throw Error('不是支援的 OrderLead 備份檔')
    const data={} as Record<Store,StoreValue[]>
    for(const store of STORE_NAMES){
-    const items=store==='imports'&&parsed.data[store]===undefined?[]:parsed.data[store]
+    const items=(store==='imports'||store==='reviewTrades')&&parsed.data[store]===undefined?[]:parsed.data[store]
     if(!arr(items))throw Error(store+' 資料格式不正確')
     data[store]=validate(store,items)
    }

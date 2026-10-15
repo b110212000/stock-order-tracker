@@ -75,5 +75,5 @@ export type StagedTrade = {
   createdAt: string
   importedAt: string
 }
-export type Store = 'stocks' | 'analyses' | 'trades' | 'quotes' | 'cashflows' | 'alerts' | 'snapshots' | 'imports'
+export type Store = 'stocks' | 'analyses' | 'trades' | 'quotes' | 'cashflows' | 'alerts' | 'snapshots' | 'imports' | 'reviewTrades'
 export type StoreValue = Stock | Analysis | Trade | Quote | CashFlow | AlertRule | AssetSnapshot | StagedTrade

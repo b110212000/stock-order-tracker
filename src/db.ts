@@ -2,8 +2,8 @@ import type { Stock, Store, StoreValue, StagedTrade, Trade } from './types'
 import { WATCHLIST } from './data'
 
 const DB_NAME = 'orderlead-local'
-const DB_VERSION = 3
-export const STORE_NAMES: Store[] = ['stocks', 'analyses', 'trades', 'quotes', 'cashflows', 'alerts', 'snapshots', 'imports']
+const DB_VERSION = 4
+export const STORE_NAMES: Store[] = ['stocks', 'analyses', 'trades', 'quotes', 'cashflows', 'alerts', 'snapshots', 'imports', 'reviewTrades']
 export const uid = () => crypto.randomUUID()
 export const now = () => new Date().toISOString()
 export const today = () => new Date().toLocaleDateString('sv-SE')
@@ -199,6 +199,28 @@ export async function clearImportInbox():Promise<void>{
       tx.oncomplete=()=>resolve()
       tx.onerror=()=>reject(tx.error||Error('清理匯入暫存失敗'))
       tx.onabort=()=>reject(tx.error||Error('清理匯入暫存失敗'))
+    })
+  }finally{db.close()}
+}
+
+/** Replace only Step 1's independent review table. No other stores are touched. */
+export async function replaceReviewTrades(records: StagedTrade[]): Promise<void>{
+  const ids=new Set<string>()
+  for(const row of records){
+    if(ids.has(row.id)||!row.id||!Number.isSafeInteger(row.quantity)||row.quantity<=0)
+      throw Error('歷史交易資料有重複或無效筆數')
+    ids.add(row.id)
+  }
+  const db=await open()
+  try {
+    await new Promise<void>((resolve,reject)=>{
+      const tx=db.transaction('reviewTrades','readwrite')
+      const store=tx.objectStore('reviewTrades')
+      store.clear()
+      for(const row of records)store.put(row)
+      tx.oncomplete=()=>resolve()
+      tx.onerror=()=>reject(tx.error||Error('歷史交易更新失敗'))
+      tx.onabort=()=>reject(tx.error||Error('歷史交易更新中斷'))
     })
   }finally{db.close()}
 }

@@ -1,0 +1,138 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Activity, ArrowDownUp, ChevronDown, ChevronUp, FileUp, Inbox, Search, ShieldCheck } from 'lucide-react'
+import { list, replaceReviewTrades } from './db'
+import { parseTradeImportBytes, MAX_IMPORT_BYTES } from './import-file'
+import { organizeGmailHistory } from './gmail-history'
+import { toStaged } from './import-trades'
+import type { StagedTrade } from './types'
+import './TradeHistoryPage.css'
+
+const number=(n:number)=>new Intl.NumberFormat('zh-TW',{maximumFractionDigits:4}).format(n)
+type Filter = 'all'|'buy'|'sell'
+export default function TradeHistoryPage(){
+  const picker=useRef<HTMLInputElement>(null)
+  const [rows,setRows]=useState<StagedTrade[]>([])
+  const [loading,setLoading]=useState(true)
+  const [working,setWorking]=useState(false)
+  const [message,setMessage]=useState('')
+  const [error,setError]=useState('')
+  const [origin,setOrigin]=useState('')
+  const [search,setSearch]=useState('')
+  const [filter,setFilter]=useState<Filter>('all')
+  const [ascending,setAscending]=useState(false)
+  const [showUnmatched,setShowUnmatched]=useState(false)
+  const [showMatches,setShowMatches]=useState<string|null>(null)
+
+  const refresh=useCallback(async()=>{
+    const existing=await list<StagedTrade>('reviewTrades')
+    setRows(existing)
+  },[])
+  useEffect(()=>{refresh().catch(e=>setError('讀取歷史交易資料失敗：'+String(e))).finally(()=>setLoading(false))},[refresh])
+  const history=useMemo(()=>organizeGmailHistory(rows,'2024-01-01'),[rows])
+  const matches=useMemo(()=>new Map(history.matchedSales.map(x=>[x.id,x.buys])),[history])
+  const filtered=useMemo(()=>{
+    const q=search.trim().toLowerCase()
+    return history.included.filter(row=>(filter==='all'||row.side===filter)&&
+      (!q||(row.symbol+' '+row.name+' '+row.date).toLowerCase().includes(q)))
+      .sort((a,b)=>{
+        const order=a.date.localeCompare(b.date)||a.time.localeCompare(b.time)||a.id.localeCompare(b.id)
+        return ascending?order:-order
+      })
+  },[history,filter,search,ascending])
+
+  async function importFile(file:File){
+    setWorking(true);setError('');setMessage('')
+    try{
+      if(file.size>MAX_IMPORT_BYTES)throw Error('檔案過大（上限 10 MB）')
+      const parsed=parseTradeImportBytes(new Uint8Array(await file.arrayBuffer()),file.name)
+      const after2024=parsed.filter(row=>row.date>='2024-01-01')
+      if(after2024.length===0)throw Error('找不到 2024 年起的富邦成交紀錄')
+      await replaceReviewTrades(toStaged(after2024))
+      await refresh()
+      setOrigin('已載入 '+after2024.length+' 筆 Gmail 原始成交紀錄')
+      setMessage('整理完成：已替換「交易紀錄驗收區」的來源資料。以前的正式交易、資金、提醒與舊匯入暫存均未修改。')
+      setShowUnmatched(false);setShowMatches(null)
+    }catch(e){setError('讀取失敗：'+(e instanceof Error?e.message:String(e)))}
+    finally{setWorking(false);if(picker.current)picker.current.value=''}
+  }
+  async function usePreviousInbox(){
+    setWorking(true);setError('');setMessage('')
+    try{
+      const existing=await list<StagedTrade>('imports')
+      const relevant=existing.filter(x=>x.date>='2024-01-01')
+      if(!relevant.length)throw Error('找不到先前暫存的 2024 年起 Gmail 紀錄，請選擇最新整理檔案')
+      await replaceReviewTrades(relevant)
+      await refresh()
+      setOrigin('來自先前暫存 '+relevant.length+' 筆（可能不是完整 Gmail 成交清單）')
+      setMessage('已整理舊版暫存；建議使用最新 2024 起的完整匯入檔再次替換，以免漏掉舊版先前略過的交易。')
+      setShowUnmatched(false);setShowMatches(null)
+    }catch(e){setError(e instanceof Error?e.message:String(e))}
+    finally{setWorking(false)}
+  }
+  return <section className="history-page">
+    <div className="history-heading">
+      <div>
+        <span className="eyebrow">STEP 01 · 僅驗證交易事實</span>
+        <h1>歷史交易紀錄</h1>
+        <p>從 2024 年開始，只看富邦證券 Gmail 的「現買／現賣」。先確認每一筆資料，其他功能暫時不開放。</p>
+      </div>
+      <button className="primary" disabled={working} onClick={()=>picker.current?.click()}><FileUp size={17}/>{working?'讀取中…':'匯入 Gmail 紀錄'}</button>
+    </div>
+    <input hidden type="file" ref={picker} accept=".json,.zip,application/json,application/zip" onChange={e=>{const file=e.target.files?.[0];if(file)void importFile(file)}}/>
+    {error&&<div className="error-msg" role="alert">{error}</div>}
+    {message&&<div className="notice history-message" role="status"><ShieldCheck size={18}/>{message}</div>}
+    {loading?<div className="card history-empty">正在讀取本機交易資料…</div>:rows.length===0?<div className="card history-empty">
+      <Inbox size={34}/>
+      <h2>從第一筆 Gmail 成交紀錄開始</h2>
+      <p>這個畫面只會顯示交易紀錄，不會直接更動既有的正式持股或資金計算。請選擇已整理好的 2024 年起 JSON / ZIP。</p>
+      <div className="history-actions"><button className="primary" onClick={()=>picker.current?.click()} disabled={working}>選擇 2024 年交易檔</button><button className="mini-button" onClick={()=>void usePreviousInbox()} disabled={working}>使用舊版已暫存紀錄</button></div>
+    </div>:<>
+      <div className="history-source">
+        <Activity size={16}/>
+        <span>{origin||'已儲存的本機 Gmail 歷史交易'} · 2024/01/01 起</span>
+        <button type="button" onClick={()=>void usePreviousInbox()} disabled={working} title="如果無法下載私人新檔，可改用先前暫存資料">讀取舊暫存</button>
+      </div>
+      <div className="history-counters">
+        <div className="card"><small>現買（全部列入）</small><strong>{history.buyCount}</strong><span>包含定期定額與尚未賣出的買進</span></div>
+        <div className="card"><small>現賣（買進股數足夠）</small><strong>{history.matchedSales.length}</strong><span>依成交時間向前配對</span></div>
+        <div className="card"><small>現賣（無法配對）</small><strong>{history.unmatched.length}</strong><span>不列入主要交易表</span></div>
+      </div>
+      <div className="history-toolbar">
+        <label className="history-search"><Search size={17}/><input aria-label="搜尋股票" placeholder="搜尋股票代號、名稱或日期" value={search} onChange={e=>setSearch(e.target.value)}/></label>
+        <div className="history-switch" aria-label="買賣篩選">
+          {(['all','buy','sell'] as const).map(x=><button type="button" key={x} className={filter===x?'selected':''} onClick={()=>setFilter(x)}>{x==='all'?'全部':x==='buy'?'現買':'現賣'}</button>)}
+        </div>
+        <button className="mini-button history-sort" onClick={()=>setAscending(x=>!x)}><ArrowDownUp size={15}/>{ascending?'舊到新':'新到舊'}</button>
+      </div>
+      <div className="history-table-heading"><h2>買賣交易表</h2><small>符合篩選的 {filtered.length} 筆／共 {history.included.length} 筆</small></div>
+      <div className="history-table-scroll card">
+        <table className="history-table">
+          <thead><tr><th>日期／時間</th><th>股票</th><th>類型</th><th>成交股數</th><th>每股成交價</th><th>成交價金</th><th>買進配對</th></tr></thead>
+          <tbody>{filtered.map(row=><tr key={row.id}>
+            <td><b>{row.date}</b><small>{row.time}</small></td>
+            <td><b>{row.name}</b><small>{row.symbol}</small></td>
+            <td><span className={'history-side '+row.side}>{row.side==='buy'?'現買':'現賣'}</span></td>
+            <td className="num">{number(row.quantity)} 股</td>
+            <td className="num">{number(row.price)}</td>
+            <td className="num">{number(row.gross)}</td>
+            <td>{row.side==='buy'?<span className="history-mut">保留</span>:<button className="history-match" onClick={()=>setShowMatches(showMatches===row.id?null:row.id)}>{showMatches===row.id?'收起':'查看買進'} {showMatches===row.id?<ChevronUp size={13}/>:<ChevronDown size={13}/>}</button>}
+              {showMatches===row.id&&matches.has(row.id)&&<div className="history-match-detail">{matches.get(row.id)?.map((x,i)=><div key={i}>{x.date}：{number(x.quantity)} 股</div>)}</div>}
+            </td>
+          </tr>)}
+          {!filtered.length&&<tr><td colSpan={7} className="history-empty-cell">沒有符合條件的交易</td></tr>}</tbody>
+        </table>
+      </div>
+      <div className="history-disclaimer">成交價金來自富邦 Gmail 通知，不含實際手續費及交易稅；本頁不計算已實現損益、資產或現在持有股數。若有無法配對的賣出，不能把買進與賣出的差額視為真正庫存。</div>
+      <section className="history-excluded card">
+        <button className="history-expander" onClick={()=>setShowUnmatched(x=>!x)}>
+          <span><b>無法配對的現賣</b><small>{history.unmatched.length} 筆 · 不納入交易主表，保留查核</small></span>
+          {showUnmatched?<ChevronUp size={20}/>:<ChevronDown size={20}/>}
+        </button>
+        {showUnmatched&&<div className="history-excluded-list">{history.unmatched.map(x=><div key={x.row.id} className="history-excluded-row">
+          <div><b>{x.row.date} · {x.row.name}（{x.row.symbol}）</b><small>現賣 {number(x.row.quantity)} 股，2024 起先前可配對買進只有 {number(x.available)} 股</small></div>
+          <span>已排除</span>
+        </div>)}{!history.unmatched.length&&<p>目前沒有無法配對的賣出。</p>}</div>}
+      </section>
+    </>}
+  </section>
+}
