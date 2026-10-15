@@ -1,12 +1,20 @@
 # OrderLead — 台股訂單領先投資管理 PWA
 
-目前版本：**v1.16.0（完整資料備份／換機轉移＋醒目 PWA Logo）**
+目前版本：**v1.16.1（App 上方標題及下方導覽固定，只有中間內容捲動）**
 
 ## 網站
 
 https://b110212000.github.io/stock-order-tracker/
 
 React + Vite + TypeScript，GitHub Pages 部署；支援安裝 iPhone PWA、手機／桌面 RWD 及深色／淺色模式。
+
+## App 固定標題與底部導覽（v1.16.1）
+
+- App Shell 使用 viewport 定位的上方品牌 Header、中間單一可捲動主畫面、下方固定「交易／設定」導覽，手機 Safari／PWA 都不讓整頁一起滑動。
+- 「交易紀錄＋左匯入右新增」及「設定」頁標題在各自的內容捲動範圍內 sticky，瀏覽大量紀錄時仍能操作。
+- iPhone 瀏海（safe-area top）和底部 Home Indicator（safe-area bottom）納入上方及下方元件高度，確保底部導航不漂浮、不遮住最後一筆。
+- 清除舊交易樣式的兩列 Grid 設定：該舊規則曾與 AppShell 的三列配置互相衝突。新增版面回歸測試。
+- 這是純版面修正，**沒有變動交易資料、備份資料或 FIFO**。
 
 ## 資料備份與轉移 + PWA Logo（v1.16.0）
 
@@ -100,6 +108,7 @@ React + Vite + TypeScript，GitHub Pages 部署；支援安裝 iPhone PWA、手�
 - v1.14.0：設定可下載與當前匯入器一致的公開 JSON 虛構範例，新增通用交易 JSON 格式，保留舊檔相容；交易頁與初始化移除舊版 `imports` 暫存恢復流程，不刪既有交易資料。
 - v1.15.0：設定恢復分享 App（原生系統分享／複製連結）；交易買賣及未配對記錄可逐筆編輯或刪除，含 FIFO 影響警告、快照一致性確認及資料安全保護。
 - v1.16.0：設定新增完整本機資料備份與合併／取代轉移，含格式驗證、交易保護及交易筆數核對；PWA 圖示換成完整的藍色長條＋上升箭頭，支援 Apple Touch 和 Android maskable。
+- v1.16.1：修復外框兩列 CSS 覆蓋底部導覽，改為 viewport-locked 固定 Header、Bottom Bar 與中間滾動內容；交易和設定頁標題 sticky，支援 iPhone safe-area。
 
 **尚未實作：即時或盤中行情 API、GPT 自動分析、跨裝置同步、背景通知及 Cloudflare 後端。** 這些功能需在 v2.0.0 另行規劃。
 

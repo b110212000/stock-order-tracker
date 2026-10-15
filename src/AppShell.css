@@ -1,25 +1,136 @@
-/* App shell owns viewport height: header + scrollable page + fixed bottom bar. */
-.app.review-shell{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:64px minmax(0,1fr) calc(67px + env(safe-area-inset-bottom,0px));height:100dvh;overflow:hidden}
-.review-shell .review-app-header{grid-column:1;grid-row:1;padding:0 20px}
+/* Stage-1 PWA uses one viewport-locked app shell.
+ * The obsolete 2-column/2-row legacy grid must NEVER control this layout.
+ * Header and bottom tabs do not participate in the scrolling page. */
+html,body,#root{width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
+.app.review-shell{
+  --ol-header-height:64px;
+  --ol-bottom-height:67px;
+  --ol-page-gutter:25px;
+  display:block;
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  height:100dvh;
+  min-height:0;
+  overflow:hidden;
+  background:var(--bg);
+  isolation:isolate
+}
+.app.review-shell .review-app-header{
+  position:absolute;
+  inset:0 0 auto;
+  height:var(--ol-header-height);
+  display:flex;
+  align-items:center;
+  padding:0 20px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  z-index:30;
+  grid-row:auto;
+  grid-column:auto
+}
 .review-shell .review-app-header .brand{gap:9px}
-.review-shell .review-app-header .brand-symbol{width:34px;height:34px;border-radius:11px}
-.review-shell .main{grid-column:1;grid-row:2;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;min-height:0}
-.review-shell .content{max-width:1100px;padding:24px 25px 36px}
-.review-shell .review-app-nav{grid-column:1;grid-row:3;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;background:var(--surface);border-top:1px solid var(--border);padding:3px max(12px,env(safe-area-inset-right,0px)) calc(3px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));z-index:15;min-height:0}
-.review-shell .review-app-nav .nav{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 8px;border:0;background:transparent;border-radius:10px;color:var(--sub);font-size:11px;font-weight:700;white-space:nowrap}
-.review-shell .review-app-nav .nav.active{color:var(--blue);background:var(--lightblue)}
+.review-shell .review-app-header .brand-logo{
+  width:36px;height:36px;object-fit:cover;border-radius:10px;
+  flex-shrink:0;box-shadow:0 2px 8px #09204324
+}
+.app.review-shell .main{
+  position:absolute;
+  top:var(--ol-header-height);
+  bottom:var(--ol-bottom-height);
+  left:0;
+  right:0;
+  width:100%;
+  height:auto;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior-y:contain;
+  -webkit-overflow-scrolling:touch;
+  grid-row:auto;
+  grid-column:auto
+}
+.review-shell .content{
+  max-width:1100px;
+  margin:0 auto;
+  padding:0 var(--ol-page-gutter) 36px
+}
+.app.review-shell .review-app-nav{
+  position:absolute;
+  inset:auto 0 0;
+  height:var(--ol-bottom-height);
+  width:100%;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  align-items:stretch;
+  gap:0;
+  padding:3px max(12px,env(safe-area-inset-right,0px))
+          calc(3px + env(safe-area-inset-bottom,0px))
+          max(12px,env(safe-area-inset-left,0px));
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  z-index:30;
+  grid-row:auto;
+  grid-column:auto
+}
+.review-shell .review-app-nav .nav{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  min-width:0;
+  border:0;
+  border-radius:10px;
+  padding:6px 8px;
+  background:transparent;
+  color:var(--sub);
+  font-size:11px;
+  font-weight:700;
+  white-space:nowrap
+}
+.review-shell .review-app-nav .nav.active{background:var(--lightblue);color:var(--blue)}
 .review-settings-icon{position:relative;display:inline-flex;align-items:center;justify-content:center}
-.review-update-dot{position:absolute;right:-5px;top:-3px;width:8px;height:8px;border-radius:100%;background:#e6424a;border:1px solid var(--surface)}
+.review-update-dot{
+  position:absolute;right:-5px;top:-3px;width:8px;height:8px;
+  border-radius:100%;background:#e6424a;border:1px solid var(--surface)
+}
+/* App title/action row belongs to the scrolling viewport but stays pinned
+ * directly below the fixed brand header. */
+.review-shell .history-heading,
+.review-shell .settings-screen>h1{
+  position:sticky;
+  top:0;
+  z-index:12;
+  background:var(--bg);
+  border-bottom:1px solid var(--border);
+  margin-inline:calc(-1 * var(--ol-page-gutter));
+  padding:15px var(--ol-page-gutter) 12px
+}
+.review-shell .history-heading{margin-bottom:3px}
+.review-shell .settings-screen>h1{margin-top:0;margin-bottom:4px}
 @media(min-width:701px){
-  .review-shell .review-app-nav{padding-left:max(14px,calc((100% - 520px)/2));padding-right:max(14px,calc((100% - 520px)/2))}
+  .review-shell .review-app-nav{
+    padding-left:max(14px,calc((100% - 520px)/2));
+    padding-right:max(14px,calc((100% - 520px)/2))
+  }
   .review-shell .review-app-nav .nav{flex-direction:row;font-size:13px;gap:9px}
 }
 @media(max-width:700px){
-  .app.review-shell{grid-template-rows:calc(56px + env(safe-area-inset-top,0px)) minmax(0,1fr) calc(62px + env(safe-area-inset-bottom,0px))}
-  .review-shell .review-app-header{padding:env(safe-area-inset-top,0px) 16px 0}
-  .review-shell .content{padding:17px 13px 28px}
-  .review-shell .review-app-nav{padding:3px 9px calc(3px + env(safe-area-inset-bottom,0px))}
+  .app.review-shell{
+    --ol-header-height:calc(56px + env(safe-area-inset-top,0px));
+    --ol-bottom-height:calc(62px + env(safe-area-inset-bottom,0px));
+    --ol-page-gutter:13px
+  }
+  .app.review-shell .review-app-header{padding:env(safe-area-inset-top,0px) 16px 0}
+  .review-shell .content{padding-bottom:28px}
+  .app.review-shell .review-app-nav{
+    padding:3px max(9px,env(safe-area-inset-right,0px))
+            calc(3px + env(safe-area-inset-bottom,0px))
+            max(9px,env(safe-area-inset-left,0px))
+  }
   .review-shell .review-app-nav .nav{font-size:11px;gap:4px;padding:5px 8px}
+  .review-shell .history-heading,
+  .review-shell .settings-screen>h1{padding-top:12px;padding-bottom:10px}
 }
-
-.review-shell .review-app-header .brand-logo{width:36px;height:36px;object-fit:cover;border-radius:10px;flex-shrink:0;box-shadow:0 2px 8px #09204324}
