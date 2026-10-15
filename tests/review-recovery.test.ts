@@ -5,7 +5,7 @@ import type { StagedTrade } from '../src/types'
 function make(id:string,date='2024-01-02'):StagedTrade{
  return {id,date,symbol:'0050',name:'元大台灣50',side:'buy',quantity:10,price:150,gross:1500,orderId:'o1',time:'09:03:00',fee:null,tax:null,status:'pending',createdAt:'2024-01-02T01:03:00.000Z',importedAt:'2026-10-15T00:00:00.000Z'}
 }
-test('recovers legacy Gmail 2024+ trades when review store is empty',()=>{
+test('recovers old imports regardless of transaction year when review store is empty',()=>{
  const a=make('a'),b=make('b')
  const output=selectRecoveredReviewRows([],[a,b])
  assert.deepEqual(output.rows,[a,b])
@@ -25,12 +25,12 @@ test('leaves the old input records and their approved state untouched',()=>{
  assert.equal(inbox[0].status,'approved')
  assert.strictEqual(output.rows[0],item)
 })
-test('does not reintroduce pre-2024 or malformed legacy rows',()=>{
+test('recovers older trades but rejects malformed legacy rows',()=>{
  const invalid={...make('bad'),time:null} as unknown as StagedTrade
  const out=selectRecoveredReviewRows([],[make('old','2023-12-12'),invalid,make('new')])
- assert.equal(out.rows.length,1)
- assert.equal(out.rows[0].id,'new')
- assert.equal(out.ignored,2)
+ assert.equal(out.rows.length,2)
+ assert.deepEqual(out.rows.map(x=>x.id),['old','new'])
+ assert.equal(out.ignored,1)
 })
 test('rejects duplicate source IDs in legacy records',()=>{
  const output=selectRecoveredReviewRows([],[make('same'),make('same')])

@@ -36,12 +36,12 @@ const compare=(a:StagedTrade,b:StagedTrade)=>a.date.localeCompare(b.date)||
   a.time.localeCompare(b.time)||a.id.localeCompare(b.id)
 const rounded=(value:number)=>Math.round((value+Number.EPSILON)*100)/100
 
-/** Only the user's 2024+ documented Gmail trades, not brokerage holdings or a tax ledger.
+/** Only documented transactions (manual or imported), not a brokerage holdings or tax ledger.
  * All buys stay visible. Unmatched sales are excluded entirely without consuming buy lots.
  * Once a symbol has an unknown-origin sale, later provisional FIFO matches remain visible,
  * but their calculated P&L must NOT be reported as reliable or included in totals. */
-export function organizeGmailHistory(source:StagedTrade[],since='2024-01-01'):HistoryReview {
-  const rows=source.filter(x=>x.date>=since && (x.side==='buy'||x.side==='sell'))
+export function organizeGmailHistory(source:StagedTrade[]):HistoryReview {
+  const rows=source.filter(x=>x.side==='buy'||x.side==='sell')
     .sort(compare)
   const inventory=new Map<string,Lot[]>()
   const tainted=new Set<string>()

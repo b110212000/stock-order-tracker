@@ -45,7 +45,7 @@ export default function App(){
   }
   return <div className="app review-shell">
     <header className="header">
-      <div className="brand"><span className="brand-symbol"><Activity size={21}/></span><span><b>OrderLead</b><small>富邦 Gmail 歷史交易</small></span></div>
+      <div className="brand"><span className="brand-symbol"><Activity size={21}/></span><span><b>OrderLead</b><small>股票買賣紀錄</small></span></div>
       <div className="review-header-actions">
         <span className="review-status">第一關 · 交易紀錄</span>
         <button className="review-repair-btn" disabled={repairBusy} onClick={()=>void repairPwa()} title="清除 OrderLead 離線快取，不刪除交易資料"><RefreshCw size={16}/><span>{repairBusy?'修復中…':'修復更新'}</span></button>
@@ -54,7 +54,7 @@ export default function App(){
     <main className="main"><div className="content">
       {repairError&&<p className="error-msg" role="alert">{repairError} <a href={import.meta.env.BASE_URL+'repair.html'}>開啟獨立修復頁</a></p>}
       <ErrorBoundary><TradeHistoryPage/></ErrorBoundary>
-      <footer className="footer">OrderLead · v1.12.0 · 其他功能暫時隱藏 · 非投資建議</footer>
+      <footer className="footer">OrderLead · v1.13.0 · 其他功能暫時隱藏 · 非投資建議</footer>
     </div></main>
     {refresh&&<div className="update" role="status">
       有新版本可更新 <button onClick={()=>updateSW(true)}>立即更新</button>

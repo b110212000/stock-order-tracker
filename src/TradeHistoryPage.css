@@ -28,3 +28,7 @@
 .grouped-overview{display:flex;flex-wrap:wrap;align-items:center;gap:7px 18px;background:var(--surface);padding:14px 16px;border:1px solid var(--border);border-radius:13px;color:var(--sub);font-size:12px}
 .grouped-overview b{color:var(--text);font-variant-numeric:tabular-nums;font-size:14px}
 @media(max-width:700px){.grouped-overview{padding:11px 12px;gap:8px 13px;font-size:11px}}
+
+.history-heading-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;align-items:center}
+.history-file-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:12px 14px;font-size:13px;font-weight:650}
+@media(max-width:700px){.history-heading-actions{width:100%;justify-content:flex-start}.history-heading-actions button{flex:1 1 auto}.history-actions button{display:inline-flex;align-items:center;justify-content:center;gap:7px}}

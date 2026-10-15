@@ -62,10 +62,11 @@ test('one symbol with missing history does not taint other symbols',()=>{
  const r=organizeGmailHistory(xs)
  assert.equal(r.reliableSaleCount,1);assert.equal(r.reliableGrossPnl,200)
 })
-test('pre-2024 buys cannot cover later sells',()=>{
+test('older purchases can cover later sales without a hardcoded start year',()=>{
  const r=organizeGmailHistory([item('2023-12-31','2382','buy',100),
  item('2024-01-01','2382','sell',30)])
- assert.equal(r.included.length,0);assert.equal(r.unmatched.length,1)
+ assert.equal(r.included.length,2);assert.equal(r.unmatched.length,0)
+ assert.equal(r.matchedSales.length,1)
 })
 test('same-day trades obey execution time, not input order',()=>{
  const sale=item('2024-04-10','3032','sell',10,110,'09:01:00')

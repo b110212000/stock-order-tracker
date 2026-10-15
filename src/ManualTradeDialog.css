@@ -1,0 +1,7 @@
+.manual-trade-dialog{width:min(520px,calc(100vw - 28px));max-height:calc(100dvh - 26px);overflow-y:auto}
+.manual-trade-dialog>p{margin-bottom:18px}
+.manual-trade-dialog .two-fields .form-label input{font:inherit;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px;width:100%;min-width:0}
+.manual-trade-dialog .manual-gross{font-size:13px;color:var(--text);margin:0;font-weight:700;background:var(--bg);padding:12px;border-radius:9px}
+.manual-trade-dialog .manual-help{color:var(--sub);line-height:1.7}
+.manual-trade-dialog .error-msg{margin:0}
+@media(max-width:450px){.manual-trade-dialog{padding:25px 18px}.manual-trade-dialog .two-fields{gap:8px}.manual-trade-dialog .two-fields .form-label input{padding:10px 8px;font-size:13px}}

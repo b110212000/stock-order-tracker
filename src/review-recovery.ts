@@ -10,7 +10,7 @@ export function selectRecoveredReviewRows(
   let ignored=0
   for(const row of inbox){
     if(!row||typeof row.id!=='string'||!row.id||
-       typeof row.date!=='string'||row.date<'2024-01-01'||
+       typeof row.date!=='string'||!/^\\d{4}-\\d{2}-\\d{2}$/.test(row.date)||
        typeof row.symbol!=='string'||!row.symbol||
        typeof row.name!=='string'||typeof row.time!=='string'||
        (row.side!=='buy'&&row.side!=='sell')||

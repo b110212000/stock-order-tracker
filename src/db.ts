@@ -262,3 +262,48 @@ export async function readOrRecoverReviewTrades():Promise<{
     })
   }finally{db.close()}
 }
+
+/** Add only new source IDs to the stage-one ledger, without clearing any manual
+ * trades. All reads and writes happen inside one transaction. */
+export async function mergeReviewTrades(records:StagedTrade[]):Promise<{added:number,duplicates:number}>{
+  const incoming=new Set<string>()
+  for(const row of records){
+    if(!row.id||incoming.has(row.id)||!Number.isSafeInteger(row.quantity)||row.quantity<=0||
+       !Number.isFinite(row.price)||row.price<=0||!Number.isFinite(row.gross)||row.gross<=0)
+      throw Error('匯入資料有重複或無效內容')
+    incoming.add(row.id)
+  }
+  const db=await open()
+  try{
+    return await new Promise((resolve,reject)=>{
+      const tx=db.transaction('reviewTrades','readwrite')
+      const store=tx.objectStore('reviewTrades')
+      const request=store.getAllKeys()
+      let result={added:0,duplicates:0}
+      request.onsuccess=()=>{
+        const ids=new Set(request.result.map(k=>String(k)))
+        for(const row of records){
+          if(ids.has(row.id))result.duplicates++
+          else{store.add(row);ids.add(row.id);result.added++}
+        }
+      }
+      tx.oncomplete=()=>resolve(result)
+      tx.onerror=()=>reject(tx.error||Error('合併交易失敗'))
+      tx.onabort=()=>reject(tx.error||Error('合併交易中斷'))
+    })
+  }finally{db.close()}
+}
+
+/** A manual transaction must not silently overwrite a previously imported row. */
+export async function addManualReviewTrade(row:StagedTrade):Promise<void>{
+  const db=await open()
+  try{
+    await new Promise<void>((resolve,reject)=>{
+      const tx=db.transaction('reviewTrades','readwrite')
+      tx.objectStore('reviewTrades').add(row)
+      tx.oncomplete=()=>resolve()
+      tx.onerror=()=>reject(tx.error||Error('手動交易儲存失敗'))
+      tx.onabort=()=>reject(tx.error||Error('手動交易儲存中斷'))
+    })
+  }finally{db.close()}
+}

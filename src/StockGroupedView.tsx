@@ -78,7 +78,7 @@ function StockCard({group}:{group:StockGroup}){
         </section>
       </div>
       <div className="grouped-stock-bottom">
-        <div><small>這份 Gmail 紀錄尚未配對賣出的股數</small><strong>{n(group.remainingQuantity)} 股</strong></div>
+        <div><small>尚未配對賣出的買進股數</small><strong>{n(group.remainingQuantity)} 股</strong></div>
         <div><small>尚未賣出部分的買進成本</small><strong>NT$ {n(group.remainingCost)}</strong></div>
         <div><small>可確認賣出毛損益</small><strong className={gainClass(group.reliableGrossPnl)}>{group.reliableGrossPnl>0?'+':''}NT$ {n(group.reliableGrossPnl)}</strong></div>
       </div>
@@ -119,6 +119,6 @@ export default function StockGroupedView({groups}:{groups:StockGroup[]}){
     <p className="grouped-explain">左邊是各筆買進，右邊是各筆可配對賣出；兩欄各自按時間排列，<b>相同高度不表示互相配對</b>。點右側「查看買進配對」才會標記對應的買進批次。收合時保留可確認的毛損益摘要，排序不影響 FIFO 配對。</p>
     {visible.map(group=><StockCard key={group.symbol} group={group}/>)}
     {visible.length===0&&<div className="card grouped-empty">沒有找到符合搜尋條件的股票。</div>}
-    <p className="grouped-footnote">資料起點為 2024 年。未配對賣出不會拿後續買進硬湊；剩餘股數是本次郵件紀錄依 FIFO 推算的「未配對買進量」，不是銀行／券商實際庫存。毛損益均未扣手續費與交易稅。</p>
+    <p className="grouped-footnote">手動或匯入的交易皆按成交日期與時間 FIFO 配對。無法配對的賣出不會拿後續買進硬湊；剩餘股數為目前紀錄計算的「未配對買進量」，不是券商的實際持股。毛損益均未扣手續費與交易稅。</p>
   </section>
 }
