@@ -1,14 +1,101 @@
-.backup-panel{padding:2px 15px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:11px}
-.backup-actions,.backup-inline{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-.backup-actions>button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:39px;flex:1 1 125px;padding:9px 11px;border-radius:10px;font-size:12px;font-weight:750;border:1px solid var(--border);background:var(--surface);color:var(--text)}
-.backup-actions .backup-main,.backup-confirm{background:var(--blue);color:#fff;border-color:var(--blue)}
-.backup-inline button,.backup-link{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 11px;border-radius:9px;border:1px solid var(--border);font-size:12px;background:var(--surface);color:var(--text);text-decoration:none}
-.backup-link{background:var(--lightblue);color:var(--blue);font-weight:750}
+/* Backup / transfer actions adapt to their available container width.
+ * Keep buttons and the restore mode inside the Settings card at 320px+. */
+.backup-panel{
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  padding:8px 15px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.backup-panel *, .backup-panel *::before,.backup-panel *::after{box-sizing:border-box}
+.backup-actions,.backup-inline{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+  width:100%;
+  min-width:0;
+}
+.backup-actions>button,
+.backup-inline button,.backup-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  width:100%;
+  min-width:0;
+  min-height:44px;
+  padding:10px 11px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--surface);
+  color:var(--text);
+  font-size:12px;
+  line-height:1.4;
+  font-weight:700;
+  text-align:center;
+  overflow-wrap:anywhere;
+}
+.backup-actions>button svg,.backup-inline button svg{flex-shrink:0}
+.backup-actions .backup-main,
 .backup-inline .backup-confirm{background:var(--blue);color:#fff;border-color:var(--blue)}
-.backup-prepared,.backup-preview{background:var(--bg);border:1px solid var(--border);padding:12px;border-radius:12px;display:flex;flex-direction:column;gap:9px;font-size:12px}
+.backup-link{background:var(--lightblue);color:var(--blue);text-decoration:none}
+.backup-prepared,.backup-preview{
+  width:100%;
+  min-width:0;
+  padding:12px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:var(--bg);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  font-size:12px;
+  line-height:1.6;
+  overflow-wrap:anywhere;
+}
 .backup-preview small{color:var(--sub)}
-.backup-preview label{display:flex;gap:10px;align-items:center;justify-content:space-between;color:var(--sub);flex-wrap:wrap}
-.backup-preview select{min-width:0;max-width:100%;padding:8px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);font-size:12px}
-.backup-note{font-size:11px;color:var(--sub);line-height:1.65;margin:0}
-.backup-status,.backup-error{font-size:12px;line-height:1.6;margin:0;color:var(--blue)}
+.backup-preview label{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:6px;
+  min-width:0;
+  font-size:12px;
+  color:var(--sub);
+}
+.backup-preview select{
+  display:block;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  min-height:44px;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:9px;
+  background:var(--surface);
+  color:var(--text);
+  font-size:16px; /* no focus zoom in Safari */
+  text-overflow:ellipsis;
+}
+.backup-note,.backup-status,.backup-error{
+  min-width:0;
+  margin:0;
+  line-height:1.65;
+  overflow-wrap:anywhere;
+}
+.backup-note{font-size:11px;color:var(--sub)}
+.backup-status,.backup-error{font-size:12px;color:var(--blue)}
 .backup-error{color:#b94444}
+@media(max-width:520px){
+  .backup-panel{padding:9px 12px 15px}
+  .backup-actions,.backup-inline{grid-template-columns:minmax(0,1fr);gap:9px}
+  .backup-actions>button,.backup-inline button,.backup-link{min-height:46px;font-size:13px}
+  .backup-prepared,.backup-preview{padding:11px}
+}
+@media(max-width:355px){
+  .backup-panel{padding-inline:10px}
+  .backup-prepared,.backup-preview{padding:9px}
+}

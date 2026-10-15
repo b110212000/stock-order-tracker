@@ -1,7 +1,185 @@
-.manual-trade-dialog{width:min(520px,calc(100vw - 28px));max-height:calc(100dvh - 26px);overflow-y:auto}
-.manual-trade-dialog>p{margin-bottom:18px}
-.manual-trade-dialog .two-fields .form-label input{font:inherit;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px;width:100%;min-width:0}
-.manual-trade-dialog .manual-gross{font-size:13px;color:var(--text);margin:0;font-weight:700;background:var(--bg);padding:12px;border-radius:9px}
-.manual-trade-dialog .manual-help{color:var(--sub);line-height:1.7}
-.manual-trade-dialog .error-msg{margin:0}
-@media(max-width:450px){.manual-trade-dialog{padding:25px 18px}.manual-trade-dialog .two-fields{gap:8px}.manual-trade-dialog .two-fields .form-label input{padding:10px 8px;font-size:13px}}
+/* Form is a modal on tablet/desktop and a full-screen editor on phones.
+ * Do not inherit the legacy right-side .overlay or 390px .dialog cap. */
+.manual-overlay.overlay{
+  position:fixed;
+  inset:auto 0 auto;
+  top:0;
+  left:0;
+  right:0;
+  bottom:auto;
+  height:100dvh;
+  width:100%;
+  z-index:100;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  padding:clamp(12px,2.5vw,24px);
+  background:rgba(9,20,37,.58);
+}
+.manual-overlay .manual-trade-dialog.dialog.form-dialog{
+  position:relative;
+  margin:0;
+  padding:0;
+  width:min(100%,560px);
+  max-width:560px;
+  height:auto;
+  max-height:100%;
+  min-height:0;
+  border-radius:18px;
+  background:var(--surface);
+  color:var(--text);
+  box-shadow:0 18px 65px #0016;
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr);
+  text-align:left;
+  overflow:hidden;
+}
+.manual-dialog-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  flex-shrink:0;
+  padding:15px 16px 12px 20px;
+  border-bottom:1px solid var(--border);
+}
+.manual-dialog-header h2{
+  margin:0;
+  font-size:19px;
+  line-height:1.3;
+  min-width:0;
+}
+.manual-dialog-header .manual-close{
+  display:grid;
+  place-items:center;
+  flex-shrink:0;
+  width:44px;
+  height:44px;
+  border:0;
+  border-radius:11px;
+  background:transparent;
+  color:var(--sub);
+}
+.manual-dialog-header .manual-close:focus-visible,
+.manual-dialog-header .manual-close:hover{background:var(--lightblue);color:var(--blue)}
+.manual-overlay .manual-trade-dialog form{
+  min-height:0;
+  max-height:100%;
+  width:100%;
+  display:grid;
+  grid-template-rows:minmax(0,1fr) auto;
+  gap:0;
+  overflow:hidden;
+}
+.manual-fields-scroll{
+  display:flex;
+  flex-direction:column;
+  gap:13px;
+  min-height:0;
+  min-width:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  scroll-padding:12px 0 28px;
+  padding:16px 20px 18px;
+}
+.manual-fields-scroll .form-label{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+  font-size:13px;
+  color:var(--sub);
+}
+.manual-fields-scroll .two-fields{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:11px;
+  min-width:0;
+  width:100%;
+}
+.manual-fields-scroll .two-fields>*{min-width:0;width:100%}
+.manual-overlay .manual-trade-dialog .manual-fields-scroll input,
+.manual-overlay .manual-trade-dialog .manual-fields-scroll select{
+  display:block;
+  box-sizing:border-box;
+  min-width:0;
+  max-width:100%;
+  width:100%;
+  height:46px;
+  padding:10px 11px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--surface);
+  color:var(--text);
+  font-size:16px; /* iPhone Safari does not zoom focused fields */
+  line-height:1.3;
+  text-overflow:ellipsis;
+}
+.manual-fields-scroll input[type=date],
+.manual-fields-scroll input[type=time]{appearance:auto;-webkit-appearance:auto}
+.manual-trade-dialog .manual-gross{
+  min-width:0;
+  margin:0;
+  padding:12px;
+  background:var(--bg);
+  border-radius:10px;
+  color:var(--text);
+  font-size:13px;
+  font-weight:700;
+  overflow-wrap:anywhere;
+}
+.manual-trade-dialog .manual-help{
+  color:var(--sub);
+  line-height:1.5;
+  font-size:11px;
+}
+.manual-dialog-footer{
+  display:flex;
+  flex-direction:column;
+  flex-shrink:0;
+  gap:8px;
+  padding:12px 20px 14px;
+  border-top:1px solid var(--border);
+  background:var(--surface);
+}
+.manual-dialog-footer .primary{
+  width:100%;
+  min-height:48px;
+  font-size:15px;
+  margin:0;
+}
+.manual-dialog-footer .error-msg{
+  margin:0;
+  max-height:88px;
+  overflow:auto;
+  overflow-wrap:anywhere;
+  font-size:12px;
+  padding:9px 11px;
+}
+@media(max-width:600px){
+  .manual-overlay.overlay{padding:0}
+  .manual-overlay .manual-trade-dialog.dialog.form-dialog{
+    width:100%;
+    max-width:none;
+    height:100%;
+    max-height:100%;
+    border-radius:0;
+    padding:env(safe-area-inset-top,0px) 0 0;
+    box-shadow:none;
+  }
+  .manual-dialog-header{padding:8px 12px 8px 17px}
+  .manual-fields-scroll{padding:14px 17px 18px}
+  .manual-fields-scroll .two-fields{grid-template-columns:minmax(0,1fr);gap:13px}
+  .manual-dialog-footer{
+    padding:10px 17px calc(12px + env(safe-area-inset-bottom,0px));
+  }
+}
+@media(max-height:480px) and (min-width:601px){
+  .manual-overlay.overlay{padding:6px 12px}
+  .manual-dialog-header{padding-top:7px;padding-bottom:6px}
+  .manual-fields-scroll{padding-top:10px;padding-bottom:10px}
+  .manual-dialog-footer{padding:8px 16px}
+}

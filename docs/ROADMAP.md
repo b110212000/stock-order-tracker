@@ -25,6 +25,7 @@
 | v1.15.0 | 設定分享 App（Issue #25）；交易逐筆編輯／刪除、FIFO 影響防呆（Issue #26） |
 | v1.16.0 | 完整本機備份／換機合併或取代（Issue #27）；新版 PWA Logo、iOS／maskable 圖示（Issue #28） |
 | v1.16.1 | App 上下框架固定：移除舊兩列 CSS、交易／設定標題 sticky 與 iOS safe-area 修正（Issue #29） |
+| v1.16.2 | 交易表單全螢幕 RWD、視覺鍵盤與固定保存列（Issue #31）；備份按鈕/模式選單窄螢幕 RWD（Issue #32） |
 | v2.0.0 | 後端、行情、GPT API、真正 Web Push |
 
 每一版對應一個 GitHub Issue。v1.x 只做前端，v2.0.0 必須經同意才啟動。新功能次版號 +1；UI/Bug 修正修訂號 +1；主版號需明確核准。未完成當期版本不開始下一版。
