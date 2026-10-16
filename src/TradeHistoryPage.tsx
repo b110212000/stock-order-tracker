@@ -7,6 +7,7 @@ import { groupTradesByStock } from './stock-groups'
 import StockGroupedView from './StockGroupedView'
 import ManualTradeDialog from './ManualTradeDialog'
 import { buildManualTrade } from './manual-review-trades'
+import { namesFromTrades } from './stock-name-directory'
 import type { ManualTradeInput } from './manual-review-trades'
 import { toStaged } from './import-trades'
 import type { StagedTrade } from './types'
@@ -43,6 +44,7 @@ export default function TradeHistoryPage(){
   },[message])
   const history=useMemo(()=>organizeGmailHistory(rows),[rows])
   const groups=useMemo(()=>groupTradesByStock(history),[history])
+  const knownStockNames=useMemo(()=>namesFromTrades(rows),[rows])
   async function importFile(file:File){
     setWorking(true);setError('');setMessage('')
     try{
@@ -135,6 +137,8 @@ export default function TradeHistoryPage(){
       <span>{error||message}</span>
       <button type="button" onClick={()=>{setError('');setMessage('')}} aria-label="關閉提示"><X size={16}/></button>
     </div>}
-    {manualOpen&&<ManualTradeDialog key={editingRow?.id||'new'} editing={editingRow||undefined} onSave={saveManual} onClose={()=>{setManualOpen(false);setEditingRow(null)}} firstTrade={rows.length===0}/>}
+    {manualOpen&&<ManualTradeDialog key={editingRow?.id||'new'} editing={editingRow||undefined}
+      knownStockNames={knownStockNames} onSave={saveManual}
+      onClose={()=>{setManualOpen(false);setEditingRow(null)}} firstTrade={rows.length===0}/>}
   </section>
 }
