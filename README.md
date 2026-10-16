@@ -8,6 +8,14 @@ https://b110212000.github.io/stock-order-tracker/
 
 React + Vite + TypeScript，GitHub Pages 部署；支援安裝 iPhone PWA、手機／桌面 RWD 及深色／淺色模式。
 
+## 免帳密雲端身分規劃（A-2-1，Issue #52）
+
+- 規劃使用 `User UUID` 識別帳號、`Device UUID` 識別每台裝置，**UUID 本身不提供任何資料讀取權限**。
+- 每台裝置會有獨立 P-256 公私鑰及伺服器端一次性挑戰驗證；另由高強度 256-bit 恢復金鑰授權遺失裝置後的重新配對。
+- 新增後端加密驗證工具與 D1 認證結構，但尚未啟用註冊、登入、換機、恢復和交易資料同步。若手機清掉 IndexedDB，沒有裝置外保存的恢復金鑰就可能無法自行恢復。
+- 安全協定與分階段任務請見 [backend/AUTH_PROTOCOL.md](backend/AUTH_PROTOCOL.md)；A-2-2 #53、A-2-3 #54、A-2-4 #55 分成獨立 Issues 實作。
+- **此更新不修改 App v1.20.0、GitHub Pages 網址、原有交易資料、備份與本機 IndexedDB。**
+
 ## 後端階段 A-1：Workers + D1 安全基礎（Issue #50）
 
 - **前端與真實資料完全不動**：現階段仍維持 GitHub Pages 和手機 IndexedDB 的 OrderLead v1.20.0；未更換網址、未升級本機 DB、未修改交易紀錄。
