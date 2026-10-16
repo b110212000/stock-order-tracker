@@ -129,8 +129,11 @@ export async function verifyDeviceProof(
     const payload=encoder.encode(canonicalDeviceProof(proof))
     const key=await crypto.subtle.importKey(
       'jwk',publicKey,{name:'ECDSA',namedCurve:'P-256'},false,['verify'])
+    // A fresh ArrayBuffer avoids ArrayBufferLike/SharedArrayBuffer typing
+    // ambiguity in TypeScript 5.9's Web Crypto BufferSource declarations.
+    const signatureBuffer=new Uint8Array(sig).buffer
     return await crypto.subtle.verify(
-      {name:'ECDSA',hash:'SHA-256'},key,sig,payload)
+      {name:'ECDSA',hash:'SHA-256'},key,signatureBuffer,payload)
   }catch{return false}
 }
 
