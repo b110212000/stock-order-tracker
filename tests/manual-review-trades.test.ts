@@ -32,3 +32,20 @@ test('prevents invalid date, fractional quantity and bad prices',()=>{
  assert.throws(()=>buildManualTrade({...base,price:'0'},'6',stamp),/單價/)
  assert.throws(()=>buildManualTrade({...base,symbol:'!'},'6',stamp),/代號/)
 })
+
+test('optional actual fee and tax are saved; blank is unknown, zero is confirmed',()=>{
+ const blank=buildManualTrade({...base,fee:'',tax:''},'fee-blank',stamp)
+ assert.equal(blank.fee,null);assert.equal(blank.tax,null)
+ const paid=buildManualTrade({...base,fee:'12.50',tax:'0'},'fee-paid',stamp)
+ assert.equal(paid.fee,12.5)
+ assert.equal(paid.tax,0)
+ assert.equal(paid.feeStatus,'manual-entered')
+ const original=buildManualTrade(base,'fee-legacy',stamp)
+ assert.equal(original.fee,null)
+})
+test('invalid negative, precision, notation and oversized fees are rejected',()=>{
+ for(const invalid of ['-1','1.001','1e3','NaN','100000001','0.0001'])
+   assert.throws(()=>buildManualTrade({...base,fee:invalid},'bad',stamp),/手續費/)
+ for(const invalid of ['-0.01','1.999','Infinity'])
+   assert.throws(()=>buildManualTrade({...base,tax:invalid},'bad',stamp),/交易稅/)
+})
