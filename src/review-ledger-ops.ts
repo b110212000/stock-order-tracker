@@ -28,7 +28,9 @@ export function editedReviewTrade(original:StagedTrade,input:ManualTradeInput):S
     name:draft.name,side:draft.side,quantity:draft.quantity,price:draft.price,
     gross,
     fee,tax,
-    feeStatus:updatedFees?'manual-entered':changedMoney?'manual-edited-unverified':original.feeStatus
+    feeStatus:changedMoney&&fee===null&&tax===null?'manual-edited-unverified':
+      updatedFees?(fee!==null||tax!==null?'manual-entered':'manual-unverified'):
+      changedMoney?'manual-edited-unverified':original.feeStatus
   }
 }
 
