@@ -106,3 +106,17 @@ test('unknown fees never become zero, and tainted matches have no confirmed net 
  const invalid=item('2024-01-15','0050','sell',20,110)
  assert.equal(organizeGmailHistory([buy,invalid,sell]).matchedSales[0].netPnl,null)
 })
+
+test('out-of-order entry respects intraday execution time and never invents an early buy',()=>{
+ const sale=item('2026-10-10','2324','sell',10,120,'09:11:00')
+ const laterBuy=item('2026-10-10','2324','buy',10,100,'09:20:00')
+ const result=organizeGmailHistory([laterBuy,sale])
+ assert.equal(result.sellCount,1)
+ assert.equal(result.unmatched[0].missing,10)
+ assert.equal(result.reliableGrossPnl,0)
+ const earlierBuy=item('2026-10-10','2324','buy',10,90,'09:00:00')
+ const resolved=organizeGmailHistory([sale,laterBuy,earlierBuy])
+ assert.equal(resolved.unmatched.length,0)
+ assert.equal(resolved.matchedSales[0].buys[0].id,earlierBuy.id)
+ assert.equal(resolved.matchedSales[0].grossPnl,300)
+})

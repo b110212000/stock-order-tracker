@@ -1,5 +1,4 @@
 import type { StagedTrade } from './types'
-import { organizeGmailHistory } from './gmail-history'
 
 export type ManualTradeInput={
   date:string
@@ -53,11 +52,3 @@ export function buildManualTrade(input:ManualTradeInput,id:string,createdAt:stri
   }
 }
 
-/** A new manual sale must be fully backed by earlier documented buys.
- * Do not add unmatched sales which could taint future FIFO costs. */
-export function assertManualSaleCovered(existing:StagedTrade[],draft:StagedTrade):void{
-  if(draft.side!=='sell')return
-  const r=organizeGmailHistory([...existing,draft])
-  const invalid=r.unmatched.find(x=>x.row.id===draft.id)
-  if(invalid)throw Error('這筆賣出缺少 '+invalid.missing+' 股可配對的歷史買進；請先補上較早的買進紀錄。')
-}

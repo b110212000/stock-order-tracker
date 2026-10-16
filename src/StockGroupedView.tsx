@@ -22,7 +22,6 @@ function RowActions({row,onEdit,onDelete}:TradeActions&{row:StagedTrade}){
 function StockCard({group,onEdit,onDelete}:{group:StockGroup}&TradeActions){
   const [collapsed,setCollapsed]=useState(false)
   const [selectedSale,setSelectedSale]=useState<string|null>(null)
-  const [showUnmatched,setShowUnmatched]=useState(false)
   const selected=group.sells.find(s=>s.row.id===selectedSale)
   const linkedIds=new Set(selected?.match.buys.map(b=>b.id)||[])
   const remainingWarning=group.uncertainInventory
@@ -32,7 +31,7 @@ function StockCard({group,onEdit,onDelete}:{group:StockGroup}&TradeActions){
     <div className="grouped-stock-head">
       <div className="grouped-title">
         <div className="grouped-stock-avatar">{group.symbol}</div>
-        <div><h2>{group.name}</h2><span>{group.symbol} · 買 {group.buys.length} · 賣 {group.sells.length}</span></div>
+        <div><h2>{group.name}</h2><span>{group.symbol} · 買 {group.buys.length} · 賣 {group.sells.length+group.unmatched.length}</span></div>
       </div>
       <div className="grouped-head-actions">
         {collapsed&&<div className="grouped-collapsed-pnl" aria-label="已確認毛損益">
@@ -63,7 +62,7 @@ function StockCard({group,onEdit,onDelete}:{group:StockGroup}&TradeActions){
         </section>
         <section className="grouped-half grouped-sells">
           <div className="grouped-half-head"><span>賣出</span><small>依成交日期</small></div>
-          {group.sells.length===0&&<div className="grouped-no-trades">尚無可完整配對的賣出</div>}
+          {group.sells.length===0&&group.unmatched.length===0&&<div className="grouped-no-trades">尚無賣出紀錄</div>}
           {group.sells.map(s=><div key={s.row.id} className={'grouped-trade '+(selectedSale===s.row.id?'grouped-selected':'')}>
             <div className="grouped-trade-meta"><span>{s.row.date}</span><RowActions row={s.row} onEdit={onEdit} onDelete={onDelete}/></div>
             <div className="grouped-trade-value">賣 {n(s.row.quantity)} 股</div>
@@ -92,25 +91,23 @@ function StockCard({group,onEdit,onDelete}:{group:StockGroup}&TradeActions){
               {!s.match.reliable&&<p>先前有來源不明賣出，此配對只供股數查核。</p>}
             </div>}
           </div>)}
+          {group.unmatched.map(x=><div key={x.row.id} className="grouped-trade grouped-pending-trade">
+            <div className="grouped-trade-meta"><span>{x.row.date}</span><RowActions row={x.row} onEdit={onEdit} onDelete={onDelete}/></div>
+            <div className="grouped-trade-value">賣 {n(x.row.quantity)} 股</div>
+            <div className="grouped-trade-sub">單價 {n(x.row.price)}</div>
+            <div className="grouped-trade-cost">成交 NT$ {n(x.row.gross)}</div>
+            <FeeSummary row={x.row}/>
+            <div className="grouped-uncertain">待配對 · 尚缺 {n(x.missing)} 股買進紀錄</div>
+          </div>)}
         </section>
       </div>
       <div className="grouped-stock-bottom">
         <div><small>尚未賣出</small><strong>{n(group.remainingQuantity)} 股</strong></div>
         <div><small>剩餘成本</small><strong>NT$ {n(group.remainingCost)}</strong></div>
-        <div><small>已確認毛損益</small><strong className={gainClass(group.reliableGrossPnl)}>{group.reliableGrossPnl>0?'+':''}NT$ {n(group.reliableGrossPnl)}</strong></div>
+        <div><small>已確認毛損益</small><strong className={gainClass(group.reliableGrossPnl)}>{hasReliableSale?(group.reliableGrossPnl>0?'+':'')+'NT$ '+n(group.reliableGrossPnl):'—'}</strong></div>
       </div>
       {remainingWarning&&<p className="grouped-warning">有 {group.unmatched.length} 筆賣出未配對，剩餘股數僅供參考。</p>}
       {group.uncertainSaleCount>0&&<p className="grouped-warning">另有 {group.uncertainSaleCount} 筆成本待確認，未計入毛損益。</p>}
-      {group.unmatched.length>0&&<div className="grouped-unmatched">
-        <button type="button" onClick={()=>setShowUnmatched(x=>!x)}>
-          {showUnmatched?'收合':'查看'} {group.unmatched.length} 筆無法配對的賣出
-          {showUnmatched?<ChevronUp size={14}/>:<ChevronDown size={14}/>}
-        </button>
-        {showUnmatched&&group.unmatched.map(x=><div className="grouped-unmatched-row" key={x.row.id}>
-          <p>{x.row.date} · 賣 {n(x.row.quantity)} 股 · 缺 {n(x.missing)} 股（未計入）</p>
-          <RowActions row={x.row} onEdit={onEdit} onDelete={onDelete}/>
-        </div>)}
-      </div>}
     </>}
   </article>
 }
@@ -137,6 +134,6 @@ export default function StockGroupedView({groups,onEdit,onDelete}:{groups:StockG
     
     {visible.map(group=><StockCard key={group.symbol} group={group} onEdit={onEdit} onDelete={onDelete}/>)}
     {visible.length===0&&<div className="card grouped-empty">沒有找到符合搜尋條件的股票。</div>}
-    <details className="grouped-more-info"><summary>計算說明</summary><p>依 FIFO（先買先賣）配對。毛損益未扣費稅；只有該筆賣出及對應全部買進都填妥手續費與交易稅，才顯示費稅後損益。留白不是 0；尚未賣出股數可能與券商庫存不同。</p></details>
+    <details className="grouped-more-info"><summary>計算說明</summary><p>交易可任意順序補登；買進來源不足的賣出會保留顯示「待配對」，但不認列損益。FIFO 依成交日期及時間計算。毛損益未扣費稅；只有該筆賣出及對應全部買進都填妥手續費與交易稅，才顯示費稅後損益。留白不是 0；尚未賣出股數可能與券商庫存不同。</p></details>
   </section>
 }

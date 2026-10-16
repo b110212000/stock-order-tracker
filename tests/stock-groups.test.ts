@@ -67,3 +67,21 @@ test('buy without sale has full documented quantity and cost',()=>{
  assert.equal(g.remainingQuantity,50)
  assert.equal(g.remainingCost,51175)
 })
+
+test('a sale entered first stays visible in the per-stock right column as pending',()=>{
+ const sale=tx('2025-11-03','2330','sell',40,700)
+ const initial=organizeGmailHistory([sale])
+ const group=groupTradesByStock(initial)[0]
+ assert.equal(initial.sellCount,1)
+ assert.equal(group.sells.length,0)
+ assert.equal(group.unmatched.length,1)
+ assert.equal(group.unmatched[0].row.id,sale.id)
+ assert.equal(group.unmatched[0].missing,40)
+ assert.equal(group.reliableGrossPnl,0)
+ const buy=tx('2025-01-01','2330','buy',40,650)
+ const resolved=groupTradesByStock(organizeGmailHistory([sale,buy]))[0]
+ assert.equal(resolved.unmatched.length,0)
+ assert.equal(resolved.sells.length,1)
+ assert.equal(resolved.sells[0].row.id,sale.id)
+ assert.equal(resolved.reliableGrossPnl,2000)
+})

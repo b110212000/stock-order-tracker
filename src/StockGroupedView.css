@@ -150,3 +150,7 @@
 .grouped-fee-summary{font-size:10px;line-height:1.5;color:var(--sub);overflow-wrap:anywhere}
 .grouped-pnl small.grouped-profit{color:#13834e;font-weight:700}
 .grouped-pnl small.grouped-loss{color:#ba4c3d;font-weight:700}
+
+/* Issue #39: keep unmatched sells visible in the right-hand column. */
+.grouped-sells .grouped-pending-trade{border-left:3px solid #d8a54d}
+.grouped-pending-trade .grouped-uncertain{overflow-wrap:anywhere}

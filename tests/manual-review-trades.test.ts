@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildManualTrade,assertManualSaleCovered } from '../src/manual-review-trades'
+import { buildManualTrade } from '../src/manual-review-trades'
 import { organizeGmailHistory } from '../src/gmail-history'
 const base={date:'2023-02-01',time:'09:01',symbol:'2330',name:'台積電',side:'buy' as const,quantity:'15',price:'552.5'}
 const stamp='2026-10-15T01:00:00.000Z'
@@ -15,16 +15,40 @@ test('new users can create the first buy without email imports and any year work
 test('manual sell from an older buy is paired by FIFO',()=>{
  const b=buildManualTrade(base,'2',stamp)
  const s=buildManualTrade({...base,side:'sell',date:'2025-03-01',quantity:'5',price:'900'},'3',stamp)
- assert.doesNotThrow(()=>assertManualSaleCovered([b],s))
  const history=organizeGmailHistory([s,b])
  assert.equal(history.matchedSales.length,1)
  assert.equal(history.matchedSales[0].grossPnl,1737.5)
 })
-test('manual sell with no earlier buy rejected, including future buy',()=>{
- const s=buildManualTrade({...base,side:'sell',date:'2020-01-01',quantity:'5'},'4',stamp)
- assert.throws(()=>assertManualSaleCovered([],s),/請先補上/)
- const b=buildManualTrade({...base,date:'2020-02-01'},'5',stamp)
- assert.throws(()=>assertManualSaleCovered([b],s),/缺少 5 股/)
+test('a sale is valid as the very first manual transaction; later-dated buys cannot cover it',()=>{
+ const sale=buildManualTrade({...base,side:'sell',date:'2020-01-01',quantity:'5'},'4',stamp)
+ assert.equal(sale.side,'sell')
+ const initial=organizeGmailHistory([sale])
+ assert.equal(initial.rawCount,1)
+ assert.equal(initial.sellCount,1)
+ assert.equal(initial.unmatched.length,1)
+ assert.equal(initial.unmatched[0].missing,5)
+ assert.equal(initial.matchedSales.length,0)
+ assert.equal(initial.reliableGrossPnl,0)
+ const laterBuy=buildManualTrade({...base,date:'2020-02-01'},'5',stamp)
+ const stillMissing=organizeGmailHistory([sale,laterBuy])
+ assert.equal(stillMissing.unmatched.length,1)
+ assert.equal(stillMissing.unmatched[0].missing,5)
+})
+test('sale-first entry becomes fully matched once earlier historical buys are added, even across years',()=>{
+ const sale=buildManualTrade({...base,date:'2026-06-01',side:'sell',quantity:'120',price:'130'},'later-sale',stamp)
+ const firstBuy=buildManualTrade({...base,date:'2024-02-01',quantity:'100',price:'100'},'earlier-1',stamp)
+ const secondBuy=buildManualTrade({...base,date:'2025-08-01',quantity:'50',price:'110'},'earlier-2',stamp)
+ const partial=organizeGmailHistory([sale,firstBuy])
+ assert.equal(partial.unmatched[0].missing,20)
+ assert.equal(partial.reliableGrossPnl,0)
+ const complete=organizeGmailHistory([sale,firstBuy,secondBuy])
+ assert.equal(complete.unmatched.length,0)
+ assert.equal(complete.sellCount,1)
+ assert.equal(complete.matchedSales.length,1)
+ assert.equal(complete.matchedSales[0].reliable,true)
+ assert.deepEqual(complete.matchedSales[0].buys.map(b=>b.quantity),[100,20])
+ assert.equal(complete.matchedSales[0].grossPnl,3400)
+ assert.equal(complete.reliableGrossPnl,3400)
 })
 test('prevents invalid date, fractional quantity and bad prices',()=>{
  assert.throws(()=>buildManualTrade({...base,date:'2023-02-30'},'6',stamp),/日期/)
