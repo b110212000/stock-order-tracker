@@ -60,7 +60,9 @@ test('native iOS date/time pickers no longer participate in grid intrinsic sizin
 test('recurring is an explicit choice and time input can remain empty',()=>{
   assert.match(dialog,/<option value="recurring">定期定額<\/option>/)
   assert.match(dialog,/date:localDate\(\),time:''/)
-  assert.match(dialog,/editing\.timeDefaulted\?'':editing\.time\.slice\(0,5\)/)
+  assert.match(dialog,/date:editing\.date,time:editing\.time\.slice\(0,5\)/)
+  assert.doesNotMatch(dialog,/editing\.timeDefaulted\?'':/)
+  assert.match(dialog,/draft\.time\|\|'選填'/)
   assert.doesNotMatch(dialog,/type="time"[^>]*required/)
   assert.doesNotMatch(dialog,/10:45/)
 })

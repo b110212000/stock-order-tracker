@@ -19,7 +19,7 @@ function localDate(){
 }
 export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editing}:Props){
   const [draft,setDraft]=useState<ManualTradeInput>(editing?{
-    date:editing.date,time:editing.timeDefaulted?'':editing.time.slice(0,5),symbol:editing.symbol,
+    date:editing.date,time:editing.time.slice(0,5),symbol:editing.symbol,
     name:editing.name,side:editing.recurring?'recurring':editing.side,
     quantity:String(editing.quantity),price:String(editing.price),
     fee:editing.fee==null?'':String(editing.fee),

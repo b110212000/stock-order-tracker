@@ -138,3 +138,35 @@ test('clearing an imported exact execution time applies the fallback and flags i
  assert.equal(edited.fee,null)
  assert.equal(edited.tax,null)
 })
+
+test('prefilled default time survives an unrelated edit without losing assumption marker',()=>{
+ const source=buildManualTrade({...draft('2025-01-01','buy',50,100),time:'',side:'recurring'},'assumed-1045',stamp)
+ assert.equal(source.time,'10:45:00')
+ assert.equal(source.timeDefaulted,true)
+ // The editor now shows 10:45 and submits it unless the user changes it.
+ const saved=editedReviewTrade(source,{...draft('2025-01-01','buy',50,100),time:'10:45',side:'recurring',name:'更正名稱'})
+ assert.equal(saved.time,'10:45:00')
+ assert.equal(saved.timeDefaulted,true)
+ assert.equal(saved.recurring,true)
+ assert.equal(saved.id,source.id)
+ const savedAgain=editedReviewTrade(saved,{...draft('2025-01-01','buy',50,100),time:'10:45',side:'recurring',name:'更正名稱'})
+ assert.equal(savedAgain.timeDefaulted,true)
+})
+test('changing the prefilled time makes it explicit; actual 10:45 remains explicit',()=>{
+ const assumed=buildManualTrade({...draft('2025-01-01','buy',10,100),time:''},'assumed',stamp)
+ const corrected=editedReviewTrade(assumed,{...draft('2025-01-01','buy',10,100),time:'09:32'})
+ assert.equal(corrected.time,'09:32:00')
+ assert.equal(corrected.timeDefaulted,undefined)
+ const actual=buildManualTrade({...draft('2025-01-01','buy',10,100),time:'10:45'},'actual',stamp)
+ assert.equal(actual.timeDefaulted,undefined)
+ const unchanged=editedReviewTrade(actual,{...draft('2025-01-01','buy',10,100),time:'10:45'})
+ assert.equal(unchanged.timeDefaulted,undefined)
+})
+test('editing an earlier broker-supplied execution time never overwrites it with 10:45',()=>{
+ const real={...tx('broker-actual','2025-01-01','buy',100,100),time:'09:21:34',fee:5,tax:0}
+ const edited=editedReviewTrade(real,{...draft('2025-01-01','buy',100,100),time:'09:21',name:'台積電更正'})
+ assert.equal(edited.time,'09:21:34')
+ assert.equal(edited.timeDefaulted,undefined)
+ assert.equal(edited.fee,5)
+ assert.equal(edited.tax,0)
+})
