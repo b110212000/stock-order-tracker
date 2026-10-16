@@ -1,4 +1,6 @@
-# OrderLead Cloudflare Workers + D1 — A-1
+# OrderLead Cloudflare Workers + D1 — A-1 + A-2-1 (inactive identity design)
+
+**A-2-1 security blueprint:** [AUTH_PROTOCOL.md](AUTH_PROTOCOL.md) documents the chosen UUID + recovery key + separately authorized device keys, implementation stages and recovery limitations. The corresponding SQL migration `0002_auth_credentials.sql` and cryptographic verification functions are inert until subsequent Issues enable authentication routes. Device ID is NOT a credential.
 
 **Current state: backend foundation only. Real trade synchronization is NOT enabled.** The React PWA stays on GitHub Pages and all existing transactions remain only in its IndexedDB until the later explicit, authenticated import step.
 
