@@ -68,6 +68,10 @@ export type StagedTrade = {
   gross: number
   orderId: string
   time: string
+  /** True only when the time was absent and the default was applied on manual entry. */
+  timeDefaulted?: boolean
+  /** Manual periodic purchase; side remains buy for FIFO and holdings. */
+  recurring?: boolean
   fee: number | null
   tax: number | null
   feeStatus?: string
