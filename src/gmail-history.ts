@@ -36,7 +36,7 @@ type Lot = { id:string,date:string,remaining:number,unitCost:number,unitPrice:nu
 const compare=(a:StagedTrade,b:StagedTrade)=>a.date.localeCompare(b.date)||
   a.time.localeCompare(b.time)||a.id.localeCompare(b.id)
 const rounded=(value:number)=>Math.round((value+Number.EPSILON)*100)/100
-const verified=(value:number|null|undefined)=>typeof value==='number'&&Number.isFinite(value)&&value>=0
+const verified=(value:number|null|undefined):value is number=>typeof value==='number'&&Number.isFinite(value)&&value>=0
 
 /** Only documented transactions (manual or imported), not a brokerage holdings or tax ledger.
  * All buys stay visible. Unmatched sales are excluded entirely without consuming buy lots.
