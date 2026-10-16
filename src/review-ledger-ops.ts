@@ -18,13 +18,17 @@ export function editedReviewTrade(original:StagedTrade,input:ManualTradeInput):S
     original.quantity!==draft.quantity||original.side!==draft.side||
     original.date!==draft.date||original.symbol!==draft.symbol||
     original.time!==time
+  // An omitted value is from older callers; explicit blank from the editor
+  // removes a cost. Do not keep broker amounts after execution terms change.
+  const fee=input.fee===undefined?(changedMoney?null:original.fee):draft.fee
+  const tax=input.tax===undefined?(changedMoney?null:original.tax):draft.tax
+  const updatedFees=fee!==original.fee||tax!==original.tax
   return {
     ...original,date:draft.date,time,symbol:draft.symbol,
     name:draft.name,side:draft.side,quantity:draft.quantity,price:draft.price,
     gross,
-    fee:changedMoney?null:original.fee,
-    tax:changedMoney?null:original.tax,
-    feeStatus:changedMoney?'manual-edited-unverified':original.feeStatus
+    fee,tax,
+    feeStatus:updatedFees?'manual-entered':changedMoney?'manual-edited-unverified':original.feeStatus
   }
 }
 
