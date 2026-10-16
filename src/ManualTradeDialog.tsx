@@ -4,6 +4,8 @@ import type { FormEvent } from 'react'
 import { CalendarDays, Clock3, X } from 'lucide-react'
 import type { ManualTradeInput } from './manual-review-trades'
 import type { StagedTrade } from './types'
+import { lookupStockName, mayAutofillName, normalizeStockSymbol, validStockSymbol } from './stock-name-directory'
+import type { NameDirectory } from './stock-name-directory'
 import './ManualTradeDialog.css'
 
 type Props={
@@ -11,13 +13,15 @@ type Props={
   onClose:()=>void
   firstTrade?:boolean
   editing?:StagedTrade
+  knownStockNames?:NameDirectory
 }
+const EMPTY_STOCK_NAMES:NameDirectory={}
 function localDate(){
   const now=new Date()
   const shifted=new Date(now.getTime()-now.getTimezoneOffset()*60000)
   return shifted.toISOString().slice(0,10)
 }
-export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editing}:Props){
+export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editing,knownStockNames=EMPTY_STOCK_NAMES}:Props){
   const [draft,setDraft]=useState<ManualTradeInput>(editing?{
     date:editing.date,time:editing.time.slice(0,5),symbol:editing.symbol,
     name:editing.name,side:editing.recurring?'recurring':editing.side,
@@ -28,6 +32,35 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editi
     date:localDate(),time:'',symbol:'',name:'',side:'buy',quantity:'',price:'',fee:'',tax:''
   })
   const overlayRef=useRef<HTMLDivElement>(null)
+  const autoNameRef=useRef<string|null>(null)
+  const [lookupStatus,setLookupStatus]=useState<'loading'|'missing'|''>('')
+
+  useEffect(()=>{
+    const symbol=normalizeStockSymbol(draft.symbol)
+    // Leave an existing/manual name untouched. A cleared name can be looked up.
+    if(!validStockSymbol(symbol)||!mayAutofillName(draft.name,autoNameRef.current)||
+       (draft.name!==''&&draft.name===autoNameRef.current)){
+      setLookupStatus('')
+      return
+    }
+    let cancelled=false
+    const id=window.setTimeout(()=>{
+      setLookupStatus('loading')
+      void lookupStockName(symbol,knownStockNames,import.meta.env.BASE_URL).then(name=>{
+        if(cancelled)return
+        if(!name){setLookupStatus('missing');return}
+        setDraft(current=>{
+          if(normalizeStockSymbol(current.symbol)!==symbol||
+             !mayAutofillName(current.name,autoNameRef.current))return current
+          if(current.name===name)return current
+          autoNameRef.current=name
+          return {...current,name}
+        })
+        setLookupStatus('')
+      }).catch(()=>{if(!cancelled)setLookupStatus('missing')})
+    },180)
+    return ()=>{cancelled=true;window.clearTimeout(id)}
+  },[draft.symbol,draft.name,knownStockNames])
   useEffect(()=>{
     // iOS Safari may keep 100dvh at the layout-viewport height while the
     // keyboard occupies part of the visual viewport. Anchor the dialog to
@@ -58,8 +91,15 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editi
   },[])
   const [busy,setBusy]=useState(false)
   const [error,setError]=useState('')
-  const set=(key:keyof ManualTradeInput,value:string)=>setDraft(old=>{
+  const set=(key:keyof ManualTradeInput,value:string)=>{
+    if(key==='symbol'||key==='name')setLookupStatus('')
+    setDraft(old=>{
     const next={...old,[key]:value}
+    if(key==='symbol'&&value!==old.symbol&&autoNameRef.current===old.name){
+      next.name=''
+      autoNameRef.current=null
+    }
+    if(key==='name')autoNameRef.current=null
     // On edits, execution terms changing invalidate previously reported broker
     // costs. The user can explicitly re-enter their verified amounts afterward.
     const sideChanged=key==='side'&&old.side!==value&&
@@ -69,7 +109,7 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editi
       next.tax=''
     }
     return next
-  })
+  })}
   async function submit(e:FormEvent<HTMLFormElement>){
     e.preventDefault()
     if(busy)return
@@ -117,6 +157,8 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editi
             <input value={draft.name} onChange={e=>set('name',e.target.value)} placeholder="例如 台積電" maxLength={100} required/>
           </label>
         </div>
+        {lookupStatus==='loading'&&<small className="manual-lookup-status" role="status">查詢名稱中…</small>}
+        {lookupStatus==='missing'&&<small className="manual-lookup-status" role="status">查無名稱，可自行填寫</small>}
         <div className="two-fields manual-numeric-row">
           <label className="form-label">成交股數
             <input inputMode="numeric" type="number" value={draft.quantity} onChange={e=>set('quantity',e.target.value)} min={1} step={1} placeholder="例如 10" required/>
