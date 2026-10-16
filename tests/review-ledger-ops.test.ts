@@ -88,3 +88,29 @@ test('changing a buy into an unsupported sell requires a shortage warning',()=>{
  assert.equal(impact.shortageShares,10)
  assert.match(mutationPrompt(buy,'edit',impact),/無法配對/)
 })
+
+test('editing only fees keeps the imported ID and execution amount unchanged',()=>{
+ const original={...tx('fee-edit','2025-01-01','buy',100,100),fee:null,tax:null}
+ const edited=editedReviewTrade(original,{...draft('2025-01-01','buy',100,100),fee:'19',tax:'0'})
+ assert.equal(edited.id,original.id)
+ assert.equal(edited.gross,original.gross)
+ assert.equal(edited.fee,19)
+ assert.equal(edited.tax,0)
+ assert.equal(edited.feeStatus,'manual-entered')
+ const impact=assessReviewMutation([original],original.id,edited)
+ assert.equal(impact.newlyUnmatched,0)
+ assert.equal(impact.recalculatedSales,0)
+})
+test('manually reconfirmed fees can be supplied during a price edit',()=>{
+ const original={...tx('broker','2025-01-01','buy',10,100),fee:20,tax:0,feeStatus:'verified'}
+ const updated=editedReviewTrade(original,{...draft('2025-01-01','buy',10,101),fee:'8',tax:'0'})
+ assert.equal(updated.fee,8)
+ assert.equal(updated.tax,0)
+ assert.equal(updated.feeStatus,'manual-entered')
+})
+test('editing existing imported fees to blank marks them as unknown',()=>{
+ const original={...tx('reset','2025-01-01','buy',10,100),fee:12,tax:0,feeStatus:'verified'}
+ const updated=editedReviewTrade(original,{...draft('2025-01-01','buy',10,100),fee:'',tax:''})
+ assert.equal(updated.fee,null)
+ assert.equal(updated.tax,null)
+})

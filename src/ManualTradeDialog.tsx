@@ -25,9 +25,11 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editi
   const [draft,setDraft]=useState<ManualTradeInput>(editing?{
     date:editing.date,time:editing.time.slice(0,5),symbol:editing.symbol,
     name:editing.name,side:editing.side,
-    quantity:String(editing.quantity),price:String(editing.price)
+    quantity:String(editing.quantity),price:String(editing.price),
+    fee:editing.fee==null?'':String(editing.fee),
+    tax:editing.tax==null?'':String(editing.tax)
   }:{
-    date:localDate(),time:localTime(),symbol:'',name:'',side:'buy',quantity:'',price:''
+    date:localDate(),time:localTime(),symbol:'',name:'',side:'buy',quantity:'',price:'',fee:'',tax:''
   })
   const overlayRef=useRef<HTMLDivElement>(null)
   useEffect(()=>{
@@ -60,7 +62,16 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editi
   },[])
   const [busy,setBusy]=useState(false)
   const [error,setError]=useState('')
-  const set=(key:keyof ManualTradeInput,value:string)=>setDraft(old=>({...old,[key]:value}))
+  const set=(key:keyof ManualTradeInput,value:string)=>setDraft(old=>{
+    const next={...old,[key]:value}
+    // On edits, execution terms changing invalidate previously reported broker
+    // costs. The user can explicitly re-enter their verified amounts afterward.
+    if(editing&&['date','time','symbol','side','quantity','price'].includes(key)&&old[key]!==value){
+      next.fee=''
+      next.tax=''
+    }
+    return next
+  })
   async function submit(e:FormEvent<HTMLFormElement>){
     e.preventDefault()
     if(busy)return
@@ -106,8 +117,16 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editi
             <input inputMode="decimal" type="number" value={draft.price} onChange={e=>set('price',e.target.value)} min="0.0001" step="any" placeholder="例如 950" required/>
           </label>
         </div>
+        <div className="two-fields manual-fees-row">
+          <label className="form-label">手續費（NT$）
+            <input inputMode="decimal" type="number" value={draft.fee??''} onChange={e=>set('fee',e.target.value)} min={0} max={100000000} step="0.01" placeholder="選填"/>
+          </label>
+          <label className="form-label">交易稅（NT$）
+            <input inputMode="decimal" type="number" value={draft.tax??''} onChange={e=>set('tax',e.target.value)} min={0} max={100000000} step="0.01" placeholder="選填"/>
+          </label>
+        </div>
         {Number.isFinite(total)&&total>0&&<p className="manual-gross">成交價金（未計費用）：NT$ {new Intl.NumberFormat('zh-TW',{maximumFractionDigits:2}).format(total)}</p>}
-        <small className="manual-help">費用與交易稅未納入計算。</small>
+        <small className="manual-help">請填實際金額；留白表示未知，填 0 表示已確認為零。變更成交條件後需重新核對費稅。</small>
         </div>
         <footer className="manual-dialog-footer">
           {error&&<div className="error-msg" role="alert">{error}</div>}

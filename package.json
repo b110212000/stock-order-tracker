@@ -1,7 +1,7 @@
 {
   "name": "stock-order-tracker",
   "private": true,
-  "version": "1.16.4",
+  "version": "1.17.0",
   "type": "module",
   "scripts": {
     "predev": "node scripts/generate-icons.cjs",

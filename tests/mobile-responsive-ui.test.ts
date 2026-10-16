@@ -41,3 +41,12 @@ test('settings actions do not force card beyond available phone width',()=>{
  assert.match(settingsCss,/\.settings-action\{min-width:0;max-width:45%/)
  assert.match(settingsCss,/@media\(max-width:380px\)/)
 })
+
+test('trade fee fields remain inside scrolling phone form, not a fixed-height footer',()=>{
+ assert.match(form,/manual-fees-row/)
+ assert.match(form,/手續費（NT\$）/)
+ assert.match(form,/交易稅（NT\$）/)
+ assert.match(form,/draft\.fee/)
+ assert.match(form,/draft\.tax/)
+ assert.match(formCss,/\.manual-fields-scroll \.two-fields/)
+})

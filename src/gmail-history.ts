@@ -15,6 +15,7 @@ export type MatchedSale = {
   proceeds:number
   cost:number
   grossPnl:number
+  netPnl:number|null
   grossRoi:number|null
   reliable:boolean
   reason?:string
@@ -31,10 +32,11 @@ export type HistoryReview = {
   reliableSaleCount:number
   uncertainSaleCount:number
 }
-type Lot = { id:string,date:string,remaining:number,unitCost:number,unitPrice:number }
+type Lot = { id:string,date:string,remaining:number,unitCost:number,unitPrice:number,unitFees:number|null }
 const compare=(a:StagedTrade,b:StagedTrade)=>a.date.localeCompare(b.date)||
   a.time.localeCompare(b.time)||a.id.localeCompare(b.id)
 const rounded=(value:number)=>Math.round((value+Number.EPSILON)*100)/100
+const verified=(value:number|null|undefined):value is number=>typeof value==='number'&&Number.isFinite(value)&&value>=0
 
 /** Only documented transactions (manual or imported), not a brokerage holdings or tax ledger.
  * All buys stay visible. Unmatched sales are excluded entirely without consuming buy lots.
@@ -58,7 +60,8 @@ export function organizeGmailHistory(source:StagedTrade[]):HistoryReview {
       buyCount++
       included.push(row)
       lots.push({id:row.id,date:row.date,remaining:row.quantity,
-        unitCost:row.gross/row.quantity,unitPrice:row.price})
+        unitCost:row.gross/row.quantity,unitPrice:row.price,
+        unitFees:verified(row.fee)&&verified(row.tax)?(row.fee+row.tax)/row.quantity:null})
       inventory.set(row.symbol,lots)
       continue
     }
@@ -72,13 +75,15 @@ export function organizeGmailHistory(source:StagedTrade[]):HistoryReview {
       continue
     }
     const buys:MatchedBuy[]=[]
-    let remaining=row.quantity,cost=0
+    let remaining=row.quantity,cost=0,buyFees=0,knownBuyFees=true
     while(remaining>0){
       const lot=lots[0]
       const used=Math.min(remaining,lot.remaining)
       const allocatedCost=used*lot.unitCost
       const allocatedProceeds=used*row.gross/row.quantity
       cost+=allocatedCost
+      if(lot.unitFees===null)knownBuyFees=false
+      else buyFees+=used*lot.unitFees
       remaining-=used
       lot.remaining-=used
       buys.push({
@@ -92,8 +97,12 @@ export function organizeGmailHistory(source:StagedTrade[]):HistoryReview {
     cost=rounded(cost)
     const grossPnl=rounded(proceeds-cost)
     const reliable=!tainted.has(row.symbol)
+    // Show a net figure only when every matched buy lot and the sale
+    // have explicit fee + tax values. Unknown never means zero.
+    const netPnl=reliable&&knownBuyFees&&verified(row.fee)&&verified(row.tax)?
+      rounded(grossPnl-buyFees-row.fee-row.tax):null
     const sale:MatchedSale={
-      id:row.id,buys,proceeds,cost,grossPnl,
+      id:row.id,buys,proceeds,cost,grossPnl,netPnl,
       grossRoi:cost>0?grossPnl/cost:null,reliable,
       reason:reliable?undefined:'該股票先前有無法配對的賣出，可能已使用這些買進股數；本筆成本待確認。'
     }

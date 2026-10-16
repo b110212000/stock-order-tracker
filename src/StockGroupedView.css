@@ -145,3 +145,8 @@
   .grouped-stock-bottom{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
   .grouped-stock-bottom strong{font-size:12px}
 }
+
+/* Optional confirmed trade charges, sized for side-by-side phone cards. */
+.grouped-fee-summary{font-size:10px;line-height:1.5;color:var(--sub);overflow-wrap:anywhere}
+.grouped-pnl small.grouped-profit{color:#13834e;font-weight:700}
+.grouped-pnl small.grouped-loss{color:#ba4c3d;font-weight:700}
