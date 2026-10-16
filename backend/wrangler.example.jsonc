@@ -1,0 +1,16 @@
+{
+  // Copy to backend/wrangler.jsonc, then replace database_id with your OWN D1 ID.
+  // Never commit your actual account resources, tokens or API secrets.
+  "name": "orderlead-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-17",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "orderlead-db",
+      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
