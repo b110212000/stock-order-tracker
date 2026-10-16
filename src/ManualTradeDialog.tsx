@@ -157,8 +157,8 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editi
             <input value={draft.name} onChange={e=>set('name',e.target.value)} placeholder="例如 台積電" maxLength={100} required/>
           </label>
         </div>
-        {lookupStatus==='loading'&&<small className="manual-lookup-status" role="status">查詢名稱中…</small>}
-        {lookupStatus==='missing'&&<small className="manual-lookup-status" role="status">查無名稱，可自行填寫</small>}
+        {lookupStatus==='loading'&&<small className="manual-name-lookup-note" role="status">查詢名稱中…</small>}
+        {lookupStatus==='missing'&&<small className="manual-name-lookup-note" role="status">查無名稱，可自行填寫</small>}
         <div className="two-fields manual-numeric-row">
           <label className="form-label">成交股數
             <input inputMode="numeric" type="number" value={draft.quantity} onChange={e=>set('quantity',e.target.value)} min={1} step={1} placeholder="例如 10" required/>
