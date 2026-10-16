@@ -17,6 +17,14 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run backend:typecheck
+      - name: Install Wrangler for local D1 migration tests
+        run: npm install --no-audit --no-fund
+        working-directory: backend
+      - name: Validate D1 migrations in a local Wrangler database
+        working-directory: backend
+        run: |
+          sed 's/REPLACE_WITH_YOUR_D1_DATABASE_ID/11111111-1111-4111-8111-111111111111/' wrangler.example.jsonc > wrangler.jsonc
+          npx wrangler d1 migrations apply DB --local
       - run: npm test
       - run: npm run build
         env:
