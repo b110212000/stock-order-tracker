@@ -56,3 +56,13 @@
   .settings-action{padding-left:0;font-size:11px}
   .settings-version .settings-new{display:none}
 }
+
+/* #42: expanded transfer card and its long actions may not widen the page. */
+.settings-screen,.settings-screen .settings-list{min-width:0;max-width:100%;overflow-x:clip}
+.settings-screen .settings-item{min-width:0;flex-wrap:nowrap}
+.settings-screen .settings-item-label{min-width:0;flex:1 1 auto}
+.settings-screen .settings-action{min-width:0;flex:0 0 auto;white-space:nowrap}
+@media(max-width:380px){
+  .settings-screen .settings-item{gap:6px}
+  .settings-screen .settings-item-label{overflow-wrap:anywhere}
+}

@@ -110,3 +110,43 @@
 .backup-prepared,.backup-preview{overflow:hidden}
 .backup-preview label,.backup-preview select{max-width:100%}
 
+
+/* #42: decide paired actions using the panel's available width rather than
+ * device width; settings cards can be narrower than the visual viewport. */
+.settings-screen .backup-panel{
+  min-width:0;
+  max-width:100%;
+  width:100%;
+  box-sizing:border-box;
+  container:orderlead-backup / inline-size
+}
+.backup-panel .backup-actions,.backup-panel .backup-inline{
+  min-width:0;
+  width:100%;
+  align-items:stretch
+}
+.backup-panel .backup-actions>*,
+.backup-panel .backup-inline>*{
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  line-height:1.4;
+  text-align:center
+}
+.backup-panel .backup-actions>button,
+.backup-panel .backup-inline button,
+.backup-panel .backup-inline .backup-link{min-height:44px}
+.backup-panel .backup-prepared,
+.backup-panel .backup-preview,
+.backup-panel .backup-note,
+.backup-panel .backup-status,
+.backup-panel .backup-error{max-width:100%;overflow-wrap:anywhere;word-break:break-word}
+@container orderlead-backup (max-width:390px){
+  .backup-actions,.backup-inline{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:480px){
+  .backup-panel .backup-actions,
+  .backup-panel .backup-inline{grid-template-columns:minmax(0,1fr)}
+}
