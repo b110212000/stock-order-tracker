@@ -224,9 +224,9 @@
   padding-bottom:10px;
 }
 
-/* #41: iPhone native date/time controls need actual input width, not merely
- * two minmax(0,1fr) columns. One column on compact phones avoids clipping.
- * The form body scrolls independently; Save remains in the anchored footer. */
+/* #41/#43: keep native date/time fields width-safe without replacing the
+ * user's preferred paired input rows on normal phones. The form body remains
+ * independently scrollable; Save stays anchored outside that area. */
 .manual-overlay.overlay{max-width:100vw;max-height:100dvh}
 .manual-overlay .manual-trade-dialog.dialog.form-dialog{min-width:0;max-width:min(560px,100%)}
 .manual-overlay .manual-trade-dialog .manual-fields-scroll :is(input,select){
@@ -242,10 +242,6 @@
   overflow-wrap:anywhere
 }
 @media(max-width:479px){
-  .manual-overlay .manual-fields-scroll .two-fields{
-    grid-template-columns:minmax(0,1fr);
-    gap:12px
-  }
   .manual-overlay .manual-fields-scroll{
     padding-inline:max(14px,env(safe-area-inset-left,0px))
                    max(14px,env(safe-area-inset-right,0px));
@@ -256,10 +252,32 @@
                    max(14px,env(safe-area-inset-right,0px))
   }
 }
+/* #43: restore the original two-column entry form on iPhones >=375px.
+ * More-specific selectors intentionally override the older <=600px
+ * single-column fallback without disturbing <=374px accessibility. */
+@media(min-width:375px) and (max-width:479px){
+  .manual-overlay .manual-fields-scroll .two-fields{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px
+  }
+}
 @media(min-width:480px) and (max-width:600px){
   .manual-overlay .manual-fields-scroll .two-fields{
     grid-template-columns:repeat(2,minmax(0,1fr));
     gap:12px
+  }
+}
+/* Allow native iOS date/time widgets to fit inside each column. Keep the
+ * native picker affordance and >=16px text for Safari keyboard zoom safety. */
+@media(min-width:375px) and (max-width:600px){
+  .manual-overlay .manual-trade-dialog .manual-fields-scroll .manual-date-row :is(input[type=date],input[type=time]){
+    min-inline-size:0;
+    max-inline-size:100%;
+    padding-inline:6px;
+  }
+  .manual-overlay .manual-trade-dialog .manual-fields-scroll .manual-date-row input::-webkit-datetime-edit{
+    min-width:0;
+    padding:0;
   }
 }
 @media(max-height:430px){
