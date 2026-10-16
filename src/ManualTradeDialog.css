@@ -345,3 +345,12 @@
 /* Focus remains keyboard-accessible although its native input is visually
  * transparent. */
 .manual-picker-shell:focus-within{outline:2px solid var(--blue);outline-offset:2px}
+
+/* Issue #46: quiet nonblocking stock-name lookup feedback inside the form. */
+.manual-overlay .manual-trade-dialog .manual-name-lookup-note{
+  font-size:11px;
+  line-height:1.35;
+  color:var(--sub);
+  margin-top:-7px;
+  overflow-wrap:anywhere;
+}
