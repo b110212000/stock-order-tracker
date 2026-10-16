@@ -287,3 +287,61 @@
   .manual-overlay .manual-dialog-footer .primary{min-height:44px}
   .manual-overlay .manual-fields-scroll{overscroll-behavior-y:contain}
 }
+
+/* #45: iOS date/time inputs have intrinsic localized widths that can exceed
+ * half the phone screen and stretch their grid items. Show a compact, stable
+ * value while leaving the REAL native picker input clickable across the
+ * whole visible field (not display:none or a fake custom calendar). */
+.manual-overlay .manual-trade-dialog .manual-fields-scroll .manual-picker-shell{
+  position:relative;
+  isolation:isolate;
+  display:flex;
+  align-items:center;
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  height:46px;
+  min-height:46px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--surface);
+  color:var(--text);
+  overflow:hidden;
+}
+.manual-overlay .manual-trade-dialog .manual-fields-scroll .manual-picker-display{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:3px;
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  padding:0 9px;
+  font-size:16px;
+  line-height:1.25;
+  white-space:nowrap;
+  pointer-events:none;
+}
+.manual-picker-display>span{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.manual-picker-display svg{flex:0 0 auto;color:var(--sub)}
+.manual-picker-placeholder{color:var(--sub)}
+.manual-overlay .manual-trade-dialog .manual-fields-scroll .manual-picker-shell :is(input[type=date],input[type=time]){
+  position:absolute;
+  inset:0;
+  z-index:2;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  min-height:0;
+  height:100%;
+  margin:0;
+  padding:0;
+  border:0;
+  opacity:0;
+  cursor:pointer;
+  box-sizing:border-box;
+}
+/* Focus remains keyboard-accessible although its native input is visually
+ * transparent. */
+.manual-picker-shell:focus-within{outline:2px solid var(--blue);outline-offset:2px}
