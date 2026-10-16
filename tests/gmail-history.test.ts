@@ -84,3 +84,25 @@ test('uses reported Gmail gross, not price-times-quantity for per-lot allocation
  assert.equal(r.matchedSales[0].proceeds,210)
  assert.equal(r.matchedSales[0].grossPnl,10)
 })
+
+test('known buy and sell charges are prorated through FIFO to calculate optional net P&L',()=>{
+ const buy=item('2024-01-01','2330','buy',100,100)
+ buy.fee=10;buy.tax=0
+ const sale=item('2024-02-01','2330','sell',30,120)
+ sale.fee=6;sale.tax=9
+ const m=organizeGmailHistory([sale,buy]).matchedSales[0]
+ assert.equal(m.grossPnl,600)
+ assert.equal(m.netPnl,582) // 600 - (10 * 30/100) - 6 - 9
+ assert.equal(organizeGmailHistory([sale,buy]).reliableGrossPnl,600)
+})
+test('unknown fees never become zero, and tainted matches have no confirmed net P&L',()=>{
+ const buy=item('2024-01-01','0050','buy',10,100)
+ buy.fee=0;buy.tax=null
+ const sell=item('2024-02-01','0050','sell',10,110)
+ sell.fee=0;sell.tax=0
+ assert.equal(organizeGmailHistory([buy,sell]).matchedSales[0].netPnl,null)
+ buy.tax=0
+ assert.equal(organizeGmailHistory([buy,sell]).matchedSales[0].netPnl,100)
+ const invalid=item('2024-01-15','0050','sell',20,110)
+ assert.equal(organizeGmailHistory([buy,invalid,sell]).matchedSales[0].netPnl,null)
+})
