@@ -6,7 +6,7 @@ import { organizeGmailHistory } from './gmail-history'
 import { groupTradesByStock } from './stock-groups'
 import StockGroupedView from './StockGroupedView'
 import ManualTradeDialog from './ManualTradeDialog'
-import { buildManualTrade, assertManualSaleCovered } from './manual-review-trades'
+import { buildManualTrade } from './manual-review-trades'
 import type { ManualTradeInput } from './manual-review-trades'
 import { toStaged } from './import-trades'
 import type { StagedTrade } from './types'
@@ -26,6 +26,7 @@ export default function TradeHistoryPage(){
   const refresh=useCallback(async()=>{
     const existing=await list<StagedTrade>('reviewTrades')
     setRows(existing)
+    return existing
   },[])
   useEffect(()=>{
     let active=true
@@ -90,11 +91,14 @@ export default function TradeHistoryPage(){
       setMessage('交易已更新，相關毛損益與股數已重新計算')
     }else{
       const draft=buildManualTrade(input,uid(),now())
-      const current=await list<StagedTrade>('reviewTrades')
-      assertManualSaleCovered(current,draft)
+      // A transaction is a historical fact: do not reject sales simply
+      // because their earlier buys have not yet been entered.
       await addManualReviewTrade(draft)
-      await refresh()
-      setMessage('已新增 '+(draft.side==='buy'?'買進':'賣出')+'：'+draft.name+' '+draft.quantity+' 股')
+      const updated=await refresh()
+      const shortage=draft.side==='sell'?
+        organizeGmailHistory(updated).unmatched.find(x=>x.row.id===draft.id):undefined
+      setMessage('已新增 '+(draft.side==='buy'?'買進':'賣出')+'：'+draft.name+' '+draft.quantity+' 股'+
+        (shortage?' · 待配對，尚缺 '+shortage.missing+' 股買進紀錄':''))
     }
     setManualOpen(false);setEditingRow(null)
   }
@@ -116,7 +120,7 @@ export default function TradeHistoryPage(){
       <div className="grouped-overview" role="status">
         <span><b>{groups.length}</b> 檔股票</span>
         <span>買進 <b>{history.buyCount}</b></span>
-        <span>賣出 <b>{history.matchedSales.length}</b></span>
+        <span>賣出 <b>{history.sellCount}</b></span>
         {history.unmatched.length>0&&<span className="history-unmatched">待核對 <b>{history.unmatched.length}</b></span>}
       </div>
       <StockGroupedView groups={groups} onEdit={editRow} onDelete={row=>void deleteRow(row)}/>
