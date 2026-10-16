@@ -114,3 +114,27 @@ test('editing existing imported fees to blank marks them as unknown',()=>{
  assert.equal(updated.fee,null)
  assert.equal(updated.tax,null)
 })
+
+test('editing a periodic investment preserves its category and missing-time source',()=>{
+ const recurring=buildManualTrade({...draft('2025-01-01','buy',100,80),side:'recurring',time:''},'periodic-edit',stamp)
+ const edited=editedReviewTrade(recurring,{...draft('2025-01-01','buy',100,80),side:'recurring',time:'',name:'台積電'})
+ assert.equal(edited.id,recurring.id)
+ assert.equal(edited.side,'buy')
+ assert.equal(edited.recurring,true)
+ assert.equal(edited.time,'10:45:00')
+ assert.equal(edited.timeDefaulted,true)
+ const converted=editedReviewTrade(recurring,{...draft('2025-01-01','buy',100,80),time:'09:20'})
+ assert.equal(converted.side,'buy')
+ assert.equal(converted.recurring,undefined)
+ assert.equal(converted.time,'09:20:00')
+ assert.equal(converted.timeDefaulted,undefined)
+})
+test('clearing an imported exact execution time applies the fallback and flags it',()=>{
+ const source={...tx('broker-timestamp','2025-01-01','buy',50,100),time:'09:07:31',fee:5,tax:0}
+ const edited=editedReviewTrade(source,{...draft('2025-01-01','buy',50,100),time:'',fee:'',tax:''})
+ assert.equal(edited.id,source.id)
+ assert.equal(edited.time,'10:45:00')
+ assert.equal(edited.timeDefaulted,true)
+ assert.equal(edited.fee,null)
+ assert.equal(edited.tax,null)
+})
