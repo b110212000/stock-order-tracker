@@ -8,6 +8,13 @@ https://b110212000.github.io/stock-order-tracker/
 
 React + Vite + TypeScript，GitHub Pages 部署；支援安裝 iPhone PWA、手機／桌面 RWD 及深色／淺色模式。
 
+## 後端階段 A-2-1：UUID、恢復金鑰與設備授權安全設計（Issue #57）
+
+- **尚未上線、尚未同步個人交易**：只新增設計文件、驗證密碼學原語、D1 auth schema 與自動測試；`/v1/*` 仍全部拒絕（503）。GitHub Pages 的 IndexedDB、本機交易、PWA 及 v1.20.0 均不變。
+- User UUID 和 Device UUID 僅作識別，**不能單獨當密碼或恢復憑證**。使用者需另外保存 256-bit 恢復金鑰；每台裝置持有自己的 WebCrypto 非匯出私鑰，伺服器僅保存公鑰與恢復秘密的 HMAC 驗證值。
+- 清除 Safari／PWA 網站資料也可能刪掉裝置 ID 與私鑰，所以換機可由舊設備授權 QR 配對；無舊設備則用另存的恢復金鑰。沒有任何授權設備、也遺失恢復金鑰，就**無法靠 Device ID 找回雲端資料**。
+- 詳細流程與威脅模型請參閱 [backend/IDENTITY_SECURITY.md](backend/IDENTITY_SECURITY.md)；A-2-2、A-2-3 分別開 Issue 開發登入／設備授權、換機／恢復，資料初次上傳則是 A-3 獨立步驟。
+
 ## 後端階段 A-1：Workers + D1 安全基礎（Issue #50）
 
 - **前端與真實資料完全不動**：現階段仍維持 GitHub Pages 和手機 IndexedDB 的 OrderLead v1.20.0；未更換網址、未升級本機 DB、未修改交易紀錄。
