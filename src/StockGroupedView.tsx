@@ -8,6 +8,10 @@ import './StockGroupedView.css'
 
 const n=(x:number)=>new Intl.NumberFormat('zh-TW',{maximumFractionDigits:2}).format(x)
 const gainClass=(v:number)=>v>0?'grouped-profit':v<0?'grouped-loss':''
+const shownCost=(x:number|null|undefined)=>x==null?'—':n(x)
+function FeeSummary({row}:{row:StagedTrade}){
+  return <div className="grouped-fee-summary">費 {shownCost(row.fee)} · 稅 {shownCost(row.tax)}</div>
+}
 type TradeActions={onEdit:(row:StagedTrade)=>void,onDelete:(row:StagedTrade)=>void}
 function RowActions({row,onEdit,onDelete}:TradeActions&{row:StagedTrade}){
   return <span className="grouped-trade-actions">
@@ -52,6 +56,7 @@ function StockCard({group,onEdit,onDelete}:{group:StockGroup}&TradeActions){
             <div className="grouped-trade-value">買 {n(b.row.quantity)} 股</div>
             <div className="grouped-trade-sub">單價 {n(b.row.price)}</div>
             <div className="grouped-trade-cost">成本 NT$ {n(b.row.gross)}</div>
+            <FeeSummary row={b.row}/>
             <div className="grouped-buy-balance">已配對賣出 {n(b.matchedQuantity)} 股</div>
             <div className="grouped-buy-remaining">未賣 {n(b.remainingQuantity)} 股</div>
           </div>)}
@@ -64,10 +69,14 @@ function StockCard({group,onEdit,onDelete}:{group:StockGroup}&TradeActions){
             <div className="grouped-trade-value">賣 {n(s.row.quantity)} 股</div>
             <div className="grouped-trade-sub">單價 {n(s.row.price)}</div>
             <div className="grouped-trade-cost">成交 NT$ {n(s.row.gross)}</div>
+            <FeeSummary row={s.row}/>
             {s.match.reliable?
               <div className="grouped-pnl">
                 <strong className={gainClass(s.match.grossPnl)}>{s.match.grossPnl>0?'+':''}NT$ {n(s.match.grossPnl)}</strong>
                 <small>毛損益 · 成本 {n(s.match.cost)}</small>
+                {s.match.netPnl!==null&&<small className={gainClass(s.match.netPnl)}>
+                  費稅後 {s.match.netPnl>0?'+':''}NT$ {n(s.match.netPnl)}
+                </small>}
               </div>:
               <div className="grouped-uncertain">成本待確認<br/>不納入損益總計</div>}
             <button type="button" className="grouped-show-match" onClick={()=>setSelectedSale(selectedSale===s.row.id?null:s.row.id)}>
@@ -128,6 +137,6 @@ export default function StockGroupedView({groups,onEdit,onDelete}:{groups:StockG
     
     {visible.map(group=><StockCard key={group.symbol} group={group} onEdit={onEdit} onDelete={onDelete}/>)}
     {visible.length===0&&<div className="card grouped-empty">沒有找到符合搜尋條件的股票。</div>}
-    <details className="grouped-more-info"><summary>計算說明</summary><p>依 FIFO（先買先賣）配對。毛損益未扣費稅；尚未賣出股數來自已記錄交易，可能與券商庫存不同。</p></details>
+    <details className="grouped-more-info"><summary>計算說明</summary><p>依 FIFO（先買先賣）配對。毛損益未扣費稅；只有該筆賣出及對應全部買進都填妥手續費與交易稅，才顯示費稅後損益。留白不是 0；尚未賣出股數可能與券商庫存不同。</p></details>
   </section>
 }
