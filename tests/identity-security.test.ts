@@ -42,7 +42,7 @@ test('recovery key has 256 random bits, canonical base64url and a server-only HM
   assert.equal(one,await recoveryVerifier(a,pepper))
   assert.notEqual(one,await recoveryVerifier(b,pepper))
   assert.notEqual(one,await recoveryVerifier(a,pepper+'2'))
-  assert.throws(()=>recoveryVerifier('short',pepper))
+  await assert.rejects(()=>recoveryVerifier('short',pepper))
   await assert.rejects(()=>recoveryVerifier(a,'short'),/pepper/)
 })
 
