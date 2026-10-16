@@ -49,7 +49,7 @@ export function buildManualTrade(input:ManualTradeInput,id:string,createdAt:stri
     throw Error('成交金額超出可接受範圍')
   return {
     id:'manual:'+id,date:input.date,time:executionTime+':00',
-    timeDefaulted,recurring:input.side==='recurring',
+    timeDefaulted:timeDefaulted||undefined,recurring:input.side==='recurring'||undefined,
     symbol,name,side:input.side==='recurring'?'buy':input.side,quantity:qty,price,gross,
     orderId:'manual',fee,tax,feeStatus:fee!==null||tax!==null?'manual-entered':'manual-unverified',
     status:'pending',createdAt,importedAt:createdAt
