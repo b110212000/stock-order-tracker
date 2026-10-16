@@ -10,7 +10,8 @@
     "prebuild": "node scripts/generate-icons.cjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "backend:typecheck": "tsc --noEmit -p backend/tsconfig.json"
   },
   "dependencies": {
     "fflate": "^0.8.2",

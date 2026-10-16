@@ -8,6 +8,15 @@ https://b110212000.github.io/stock-order-tracker/
 
 React + Vite + TypeScript，GitHub Pages 部署；支援安裝 iPhone PWA、手機／桌面 RWD 及深色／淺色模式。
 
+## 後端階段 A-1：Workers + D1 安全基礎（Issue #50）
+
+- **前端與真實資料完全不動**：現階段仍維持 GitHub Pages 和手機 IndexedDB 的 OrderLead v1.20.0；未更換網址、未升級本機 DB、未修改交易紀錄。
+- 專案新增 `backend/`：獨立 Cloudflare Worker 的健康檢查路由 `GET /health`、D1 使用者／裝置／交易／變更序列 SQL migration，以及 Wrangler 範例設定。
+- **沒有啟用同步**：所有 `/v1/*` API 暫時回應 `503 SYNC_NOT_ENABLED`，不允許匿名上傳、下載或修改任何交易；不把任何個人交易資料放進 GitHub、Workers 或 D1。
+- 後續 Issue 會先做身分驗證、帳號隔離與備份，才開啟首次手動上傳與雙向同步，並進行手機／電腦還原驗收。
+- 請參考 [backend/README.md](backend/README.md) 的本機啟動、D1 建置、Wrangler 配置及正式部署步驟。登入與遠端資料庫建立需要使用者在**自己的 Cloudflare 帳號**完成。
+- 前端搬到 Cloudflare（方案 B）尚未執行，等待方案 A 完整驗收後再決定。**目前沒有宣稱交易已經備份到雲端。**
+
 ## 股票代號自動填入名稱（v1.20.0，Issue #46）
 
 - 「交易 → 新增」輸入股票代號後，若本身尚未填名稱，系統會自動將台灣**上市、上櫃、興櫃股票及 ETF** 名稱帶入，例如 `2330 → 台積電`、`6488 → 環球晶`、`0050 → 元大台灣50`、`00919 → 群益台灣精選高息`。不需要選取候選清單或輸入 API 金鑰。

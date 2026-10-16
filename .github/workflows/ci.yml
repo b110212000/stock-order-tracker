@@ -16,6 +16,7 @@ jobs:
           node-version: '22'
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
+      - run: npm run backend:typecheck
       - run: npm test
       - run: npm run build
         env:
