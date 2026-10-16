@@ -104,7 +104,7 @@ function StockCard({group,onEdit,onDelete}:{group:StockGroup}&TradeActions){
       <div className="grouped-stock-bottom">
         <div><small>尚未賣出</small><strong>{n(group.remainingQuantity)} 股</strong></div>
         <div><small>剩餘成本</small><strong>NT$ {n(group.remainingCost)}</strong></div>
-        <div><small>已確認毛損益</small><strong className={gainClass(group.reliableGrossPnl)}>{group.reliableGrossPnl>0?'+':''}NT$ {n(group.reliableGrossPnl)}</strong></div>
+        <div><small>已確認毛損益</small><strong className={gainClass(group.reliableGrossPnl)}>{hasReliableSale?(group.reliableGrossPnl>0?'+':'')+'NT$ '+n(group.reliableGrossPnl):'—'}</strong></div>
       </div>
       {remainingWarning&&<p className="grouped-warning">有 {group.unmatched.length} 筆賣出未配對，剩餘股數僅供參考。</p>}
       {group.uncertainSaleCount>0&&<p className="grouped-warning">另有 {group.uncertainSaleCount} 筆成本待確認，未計入毛損益。</p>}
