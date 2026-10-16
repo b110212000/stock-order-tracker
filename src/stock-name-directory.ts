@@ -81,6 +81,11 @@ function writeCachedNames(names:NameDirectory):void{
   catch{ /* Safari storage may be disabled. The bundled directory still works. */ }
 }
 
+/** Never overwrite a name typed by the user or already present on an edited trade. */
+export function mayAutofillName(current:string,lastAuto:string|null):boolean{
+  return current.trim()===''||(lastAuto!==null&&current===lastAuto)
+}
+
 /** Injectable factory for deterministic tests; no lookup sends the entered code. */
 export function createStockNameLookup(request:JsonFetcher=browserJson){
   const bundles=new Map<string,Promise<NameDirectory>>()
