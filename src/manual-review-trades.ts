@@ -5,7 +5,7 @@ export type ManualTradeInput={
   time:string
   symbol:string
   name:string
-  side:'buy'|'sell'
+  side:'buy'|'sell'|'recurring'
   quantity:string
   price:string
   fee?:string
@@ -35,18 +35,22 @@ export function buildManualTrade(input:ManualTradeInput,id:string,createdAt:stri
   const fee=optionalCost(input.fee,'手續費')
   const tax=optionalCost(input.tax,'交易稅')
   if(!ymd(input.date))throw Error('請填寫有效的成交日期')
-  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(input.time))throw Error('請填寫有效的成交時間')
+  // Preserve whether the time came from the user rather than the fallback.
+  const timeDefaulted=input.time.trim()===''
+  const executionTime=timeDefaulted?'10:45':input.time
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(executionTime))throw Error('請填寫有效的成交時間')
   if(!/^[A-Z0-9]{4,8}$/.test(symbol))throw Error('股票代號須為 4～8 碼英數字')
   if(!name||name.length>100)throw Error('請填寫股票名稱')
-  if(!['buy','sell'].includes(input.side))throw Error('請選擇買進或賣出')
+  if(!['buy','sell','recurring'].includes(input.side))throw Error('請選擇交易方向')
   if(!Number.isSafeInteger(qty)||qty<=0)throw Error('股數須為正整數（零股可直接輸入股數）')
   if(!Number.isFinite(price)||price<=0||price>10000000)throw Error('單價須為大於零的有效數字')
   const gross=Math.round(price*qty*100)/100
   if(!Number.isFinite(gross)||gross<=0||!Number.isSafeInteger(Math.round(gross*100)))
     throw Error('成交金額超出可接受範圍')
   return {
-    id:'manual:'+id,date:input.date,time:input.time+':00',
-    symbol,name,side:input.side,quantity:qty,price,gross,
+    id:'manual:'+id,date:input.date,time:executionTime+':00',
+    timeDefaulted:timeDefaulted||undefined,recurring:input.side==='recurring'||undefined,
+    symbol,name,side:input.side==='recurring'?'buy':input.side,quantity:qty,price,gross,
     orderId:'manual',fee,tax,feeStatus:fee!==null||tax!==null?'manual-entered':'manual-unverified',
     status:'pending',createdAt,importedAt:createdAt
   }

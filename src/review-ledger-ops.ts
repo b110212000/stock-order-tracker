@@ -10,7 +10,9 @@ export function editedReviewTrade(original:StagedTrade,input:ManualTradeInput):S
   const draft=buildManualTrade(input,'edit',original.createdAt)
   // The time picker has minute precision; preserve broker-provided seconds
   // when the visible HH:mm value was not changed.
-  const time=original.time.slice(0,5)===input.time?original.time:draft.time
+  const time=original.time.slice(0,5)===input.time||
+    (original.timeDefaulted===true&&input.time.trim()==='')?
+    original.time:draft.time
   // Preserve exact broker gross if only display metadata changed.
   const gross=original.price===draft.price&&original.quantity===draft.quantity?
     original.gross:draft.gross
@@ -24,7 +26,8 @@ export function editedReviewTrade(original:StagedTrade,input:ManualTradeInput):S
   const tax=input.tax===undefined?(changedMoney?null:original.tax):draft.tax
   const updatedFees=fee!==original.fee||tax!==original.tax
   return {
-    ...original,date:draft.date,time,symbol:draft.symbol,
+    ...original,date:draft.date,time,timeDefaulted:draft.timeDefaulted,
+    recurring:draft.recurring,symbol:draft.symbol,
     name:draft.name,side:draft.side,quantity:draft.quantity,price:draft.price,
     gross,
     fee,tax,

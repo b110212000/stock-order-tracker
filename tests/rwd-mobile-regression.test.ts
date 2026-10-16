@@ -45,3 +45,22 @@ test('backup previews and settings cards never force a horizontal page scroll',(
   assert.match(backup,/\.backup-panel \.backup-preview,[\s\S]*?overflow-wrap:anywhere/)
   assert.match(settings,/\.settings-screen,\.settings-screen \.settings-list\s*\{[^}]*overflow-x:clip/)
 })
+
+test('native iOS date/time pickers no longer participate in grid intrinsic sizing',()=>{
+  assert.match(dialog,/manual-picker-shell/)
+  assert.match(dialog,/manual-picker-display/)
+  assert.match(dialog,/type="date" aria-label="成交日期"/)
+  assert.match(dialog,/type="time" aria-label="成交時間（選填）"/)
+  assert.match(dialog,/draft\.time\|\|'選填'/)
+  assert.match(manual,/\.manual-picker-shell\s*\{[^}]*position:relative;/)
+  assert.match(manual,/\.manual-picker-shell :is\(input\[type=date\],input\[type=time\]\)\s*\{[^}]*position:absolute;/)
+  assert.match(manual,/\.manual-picker-shell :is\(input\[type=date\],input\[type=time\]\)\s*\{[^}]*opacity:0;/)
+  assert.match(manual,/\.manual-picker-shell:focus-within/)
+})
+test('recurring is an explicit choice and time input can remain empty',()=>{
+  assert.match(dialog,/<option value="recurring">定期定額<\/option>/)
+  assert.match(dialog,/date:localDate\(\),time:''/)
+  assert.match(dialog,/editing\.timeDefaulted\?'':editing\.time\.slice\(0,5\)/)
+  assert.doesNotMatch(dialog,/type="time"[^>]*required/)
+  assert.doesNotMatch(dialog,/10:45/)
+})

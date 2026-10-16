@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { FormEvent } from 'react'
-import { X } from 'lucide-react'
+import { CalendarDays, Clock3, X } from 'lucide-react'
 import type { ManualTradeInput } from './manual-review-trades'
 import type { StagedTrade } from './types'
 import './ManualTradeDialog.css'
@@ -17,19 +17,15 @@ function localDate(){
   const shifted=new Date(now.getTime()-now.getTimezoneOffset()*60000)
   return shifted.toISOString().slice(0,10)
 }
-function localTime(){
-  const d=new Date()
-  return [d.getHours(),d.getMinutes()].map(n=>String(n).padStart(2,'0')).join(':')
-}
 export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editing}:Props){
   const [draft,setDraft]=useState<ManualTradeInput>(editing?{
-    date:editing.date,time:editing.time.slice(0,5),symbol:editing.symbol,
-    name:editing.name,side:editing.side,
+    date:editing.date,time:editing.timeDefaulted?'':editing.time.slice(0,5),symbol:editing.symbol,
+    name:editing.name,side:editing.recurring?'recurring':editing.side,
     quantity:String(editing.quantity),price:String(editing.price),
     fee:editing.fee==null?'':String(editing.fee),
     tax:editing.tax==null?'':String(editing.tax)
   }:{
-    date:localDate(),time:localTime(),symbol:'',name:'',side:'buy',quantity:'',price:'',fee:'',tax:''
+    date:localDate(),time:'',symbol:'',name:'',side:'buy',quantity:'',price:'',fee:'',tax:''
   })
   const overlayRef=useRef<HTMLDivElement>(null)
   useEffect(()=>{
@@ -66,7 +62,9 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editi
     const next={...old,[key]:value}
     // On edits, execution terms changing invalidate previously reported broker
     // costs. The user can explicitly re-enter their verified amounts afterward.
-    if(editing&&['date','time','symbol','side','quantity','price'].includes(key)&&old[key]!==value){
+    const sideChanged=key==='side'&&old.side!==value&&
+      (old.side==='recurring'||old.side==='buy')&&(value==='recurring'||value==='buy')
+    if(editing&&['date','time','symbol','side','quantity','price'].includes(key)&&old[key]!==value&&!sideChanged){
       next.fee=''
       next.tax=''
     }
@@ -90,15 +88,25 @@ export default function ManualTradeDialog({onSave,onClose,firstTrade=false,editi
         <div className="manual-fields-scroll">
         <label className="form-label">交易方向
           <select value={draft.side} onChange={e=>set('side',e.target.value)} required>
-            <option value="buy">買進</option><option value="sell">賣出</option>
+            <option value="buy">買進</option><option value="sell">賣出</option><option value="recurring">定期定額</option>
           </select>
         </label>
         <div className="two-fields manual-date-row">
           <label className="form-label">成交日期
-            <input type="date" value={draft.date} onChange={e=>set('date',e.target.value)} required/>
+            <span className="manual-picker-shell">
+              <span className="manual-picker-display" aria-hidden="true">
+                <span>{draft.date?draft.date.replaceAll('-','/'):'選擇日期'}</span><CalendarDays size={16}/>
+              </span>
+              <input type="date" aria-label="成交日期" value={draft.date} onChange={e=>set('date',e.target.value)} required/>
+            </span>
           </label>
-          <label className="form-label">成交時間
-            <input type="time" value={draft.time} onChange={e=>set('time',e.target.value)} required/>
+          <label className="form-label">成交時間（選填）
+            <span className="manual-picker-shell">
+              <span className={'manual-picker-display'+(!draft.time?' manual-picker-placeholder':'')} aria-hidden="true">
+                <span>{draft.time||'選填'}</span><Clock3 size={16}/>
+              </span>
+              <input type="time" aria-label="成交時間（選填）" value={draft.time} onChange={e=>set('time',e.target.value)}/>
+            </span>
           </label>
         </div>
         <div className="two-fields manual-stock-row">
