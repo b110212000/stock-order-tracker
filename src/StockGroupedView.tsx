@@ -52,7 +52,7 @@ function StockCard({group,onEdit,onDelete}:{group:StockGroup}&TradeActions){
           {group.buys.length===0&&<div className="grouped-no-trades">尚無可用買進紀錄</div>}
           {group.buys.map(b=><div key={b.row.id} className={'grouped-trade '+(linkedIds.has(b.row.id)?'grouped-linked':'')}>
             <div className="grouped-trade-meta"><span>{b.row.date}</span><RowActions row={b.row} onEdit={onEdit} onDelete={onDelete}/></div>
-            <div className="grouped-trade-value">買 {n(b.row.quantity)} 股</div>
+            <div className="grouped-trade-value">{b.row.recurring?'定期定額':'買'} {n(b.row.quantity)} 股</div>
             <div className="grouped-trade-sub">單價 {n(b.row.price)}</div>
             <div className="grouped-trade-cost">成本 NT$ {n(b.row.gross)}</div>
             <FeeSummary row={b.row}/>
