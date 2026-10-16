@@ -1,6 +1,16 @@
-# OrderLead Cloudflare Workers + D1 — A-1
+# OrderLead Cloudflare Workers + D1 — A-1 / A-2-1
 
-**Current state: backend foundation only. Real trade synchronization is NOT enabled.** The React PWA stays on GitHub Pages and all existing transactions remain only in its IndexedDB until the later explicit, authenticated import step.
+**Current state: A-1 backend foundation + A-2-1 security schema and cryptographic primitives only. Real authentication and trade synchronization are NOT enabled.** The React PWA stays on GitHub Pages and all existing transactions remain only in its IndexedDB until the later explicit, authenticated import step.
+
+## A-2 identity protocol (NOT activated yet)
+
+Please read [IDENTITY_SECURITY.md](IDENTITY_SECURITY.md) for the full threat model and phased flow.
+
+- `User UUID` and `Device UUID` are public identifiers, not passwords or standalone recovery credentials.
+- Recovery uses a separately preserved **256-bit random secret**. The future server will store only an HMAC verifier keyed by a **Cloudflare Worker Secret pepper**. Never put recovery keys or the pepper into GitHub, D1 plaintext, logs, URLs, or screenshots.
+- Every device gets an independent P-256 key pair; the browser private key must be non-extractable and saved to IndexedDB. Removing that browser storage may destroy the key and Device ID, so users need the separately preserved recovery secret.
+- Future HTTP verification must check active device ownership, signature, timestamp, body digest, and **atomic replay-nonce insertion**, with rate limiting and device revocation before any data access.
+- `0002_identity_credentials.sql` creates tables for those checks but does **not** activate routes. All `/v1/*` currently return `503 SYNC_NOT_ENABLED`. The Worker never reads/writes any user's actual trades yet.
 
 ## Local setup
 
