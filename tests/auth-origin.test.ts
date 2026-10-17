@@ -43,8 +43,8 @@ test('CORS emits only exact requested allowed origin, never a wildcard',()=>{
   assert.equal(headers.get('Access-Control-Allow-Origin'),'https://b110212000.github.io')
   assert.equal(headers.get('Vary'),'Origin')
   assert.equal(headers.get('Access-Control-Allow-Headers'),
-    'Content-Type,X-OrderLead-Nonce,X-OrderLead-Signature')
-  assert.equal(headers.get('Access-Control-Allow-Methods'),'POST,OPTIONS')
+    'Authorization,Content-Type,X-OrderLead-Nonce,X-OrderLead-Signature')
+  assert.equal(headers.get('Access-Control-Allow-Methods'),'GET,POST,OPTIONS')
   assert.throws(()=>authCorsHeaders('https://b110212000.github.io.evil.example'),
     /INVALID_CORS_ORIGIN/)
   assert.throws(()=>authCorsHeaders('http://localhost:5173'),/INVALID_CORS_ORIGIN/)
