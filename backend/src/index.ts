@@ -14,6 +14,9 @@ export interface D1HealthBinding {
 }
 export interface Env {
   DB: D1HealthBinding
+  /** Both explicit flags must be set AFTER security review/real D1 tests. */
+  AUTH_ROUTES_ENABLED?:string
+  AUTH_EDGE_PROTECTED?:string
 }
 
 const responseHeaders={
