@@ -218,7 +218,7 @@ test('missing, corrupted, or extra cloud rows prevent false verified status',asy
   assert.equal(db.snapshots.get(user+'|'+plan.backupId)?.status,'staging')
   for(const chunk of plan.chunks)await appendCloudBackupChunk(db,owner,plan.backupId,chunk)
   const item=[...db.entries.values()][0]
-  item.payload_json=item.payload_json.replace('private','tampered')
+  item.payload_json=item.payload_json+' ' // stored byte content now mismatches saved SHA-256
   await assert.rejects(()=>completeCloudBackup(db,owner,plan.backupId),/CLOUD_BACKUP_INVALID/)
   assert.equal(db.snapshots.get(user+'|'+plan.backupId)?.status,'staging')
 })
