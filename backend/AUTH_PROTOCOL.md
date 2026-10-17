@@ -18,6 +18,16 @@ The return value identifies **only that one verified operation**. It is not a lo
 
 **Before enabling any authentication route**: demonstrate real D1 transaction semantics (unit-test mocks are not a substitute), implement Cloudflare-level rate limiting plus per-account attempts and challenge quotas, design secure expiring/rotating sessions with revocation, persist non-extractable browser keys safely, require offline recovery-key backup confirmation, and validate iPhone PWA storage/recovery. Do not pass verified UUIDs from any unchecked client request straight to downstream queries.
 
+## Issue #53 step 4 — short-lived sessions and backend rate counters (not live)
+
+`backend/migrations/0004_auth_sessions_limits.sql` adds two **schema-only** tables: `auth_device_sessions` with a SHA-256 digest of a 256-bit random bearer token, strict owner+device FK, 15-minute expiry and revocation; and `auth_request_limits` with SHA-256 hashed ingress-IP/account fixed-window buckets. **This migration is not applied to the user's real D1 yet.** All earlier 0001/0002/0003 migrations were applied via Dashboard Console, so do not blindly run Wrangler migrations.
+
+`backend/src/auth-sessions.ts` can mint a short-lived in-memory-only token *after* `verifyDeviceLogin` returns, recheck `authorized_device_keys.revoked_at` before issuing, and authenticate every later request by database digest+expiry+active-device join. The authorized device list is strictly scoped to the account derived from the authenticated token; UUID supplied in a request never grants access. Logout marks the token revoked and cannot be replayed. Never put the token in a URL, cookie, localStorage, error message, analytics or GitHub. The private key must remain non-extractable in IndexedDB.
+
+`backend/src/auth-rate-limits.ts` reserves requests using an atomic SQL upsert keyed by a digest of the Cloudflare ingress IP, optional account UUID, purpose, and five-minute window. It does not store raw IP and fails closed if the ingress IP is missing/malformed. Rate quotas are for registration challenges/completion, login challenges/completion, and authorized device listing. This must be paired with Cloudflare edge WAF/rate-limiting and strict Origin checks; database counters alone are insufficient to resist unauthenticated request floods.
+
+**Security gate stays closed**: `backend/src/index.ts` still returns `503 SYNC_NOT_ENABLED` for every `/v1/*`, these modules are not imported by it, there is no live login, recovery, access to device list or cloud backup, and the current local IndexedDB/version remain untouched. Next: safely wire auth routes, check CORS/Origin, integrate rate protection and real D1 tests, save signing CryptoKey and display/off-device-confirm recovery key, then run iPhone E2E acceptance before allowing financial backups.
+
 ## Goals and trust boundaries
 
 - User UUID (random v4) identifies one person's data under the owner's Cloudflare D1. Device UUID (random v4) identifies an installation. **Neither UUID grants access, ever.**
