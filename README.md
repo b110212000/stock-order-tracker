@@ -8,6 +8,13 @@ https://b110212000.github.io/stock-order-tracker/
 
 React + Vite + TypeScript，GitHub Pages 部署；支援安裝 iPhone PWA、手機／桌面 RWD 及深色／淺色模式。
 
+## 後端 A-2-2：首次裝置身分準備（Issue #53，進行中）
+
+- 新增獨立 `src/cloud-identity.ts`，讓未來註冊流程能產生 User UUID、Device UUID、256-bit 恢復金鑰，以及**無法匯出**的設備 P-256 私鑰；支援簽署由伺服器提供的登入挑戰。
+- 目前僅為**可測試的前端安全工具**，沒有匯入 App 畫面、沒有啟用註冊或登入 API，也沒有在手機 IndexedDB 寫入任何新記錄。
+- 接下來仍須完成伺服器身分核對、防重放、限制請求速率、備份金鑰確認及 iPhone 實機測試，才能允許使用者真正註冊。
+- 原交易資料、GitHub Pages 及 v1.20.0 全部不變，沒有任何雲端交易同步。
+
 ## Cloudflare Workers 線上部署設定（Issue #59）
 
 - 使用者已建立自己的 `orderlead-db` D1；`backend/wrangler.jsonc` 已提交非秘密的 D1 UUID 與 `DB` 綁定，Worker 專案名稱 `orderlead-api`。
