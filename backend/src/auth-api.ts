@@ -34,7 +34,7 @@ const allowedRoutes=new Set([
 
 function json(status:number,data:Record<string,unknown>,origin:string,mode:AuthRuntimeMode):Response{
   const headers=new Headers(responseBase)
-  for(const [key,value] of authCorsHeaders(origin,mode))headers.set(key,value)
+  authCorsHeaders(origin,mode).forEach((value,key)=>headers.set(key,value))
   // Never allow shared cache to store credentials or authentication outcomes.
   return new Response(JSON.stringify(data),{status,headers})
 }
