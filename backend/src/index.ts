@@ -1,3 +1,6 @@
+import {handleGatedAuthRequest} from './auth-api'
+import type {EnrollmentD1} from './auth-registration'
+
 /**
  * OrderLead backend foundation only.
  *
