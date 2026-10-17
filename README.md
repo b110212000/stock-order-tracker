@@ -13,7 +13,8 @@ React + Vite + TypeScript，GitHub Pages 部署；支援安裝 iPhone PWA、手�
 - 完整雲端備份預定涵蓋現有 **9 個 IndexedDB stores**（stocks、analyses、trades、quotes、cashflows、alerts、snapshots、imports、reviewTrades），不是只備份交易紀錄。
 - `src/cloud-backup-snapshot.ts` 使用既有 `snapshotLocalData()` 在單一 IndexedDB readonly transaction 取得一致快照，沿用 `validateFullBackup()`、將記錄和物件鍵依固定順序排列，計算整份內容及每張表的 SHA-256 校驗碼和筆數。超過 25 MB、空白、缺表、重複記錄、資料格式錯誤、校驗不符都拒絕。
 - `backend/migrations/0003_first_cloud_backup.sql` 預備 D1 完整快照／各表資料結構，帳號分隔、快照先標記 staging，不得未經服務端校驗即視為 verified；**尚未在你的 Cloudflare 帳號執行這份 SQL**。
-- **目前是備份程式和資料結構準備，還無法真正上傳或還原雲端資料**。必須先完成 Issue #53 的登入限速、Session、授權 API，再實作 D1 分批上傳、真正伺服器端 checksum 核對與端到端還原測試。
+- Issue #66 已加入**未接上公開 API**的 `src/cloud-backup-chunks.ts` 與 `backend/src/cloud-backup-d1.ts`：按大小分批、同一備份 ID 可重試、D1 `staging` 保留未完成資料、由伺服器重新讀回九表並重算 SHA-256，完整相符才標記 `verified`，且僅允許完成快照下載還原。不能因上傳部分成功就宣稱備份成功。
+- **目前仍無法真正上傳或還原你的 Cloudflare 資料**：正式 D1 仍未執行 0003；Issue #53 的登入限速、Session、可撤銷身分及公開備份 API 仍未完成。此輪只有未公開的 D1 寫入引擎與測試，尚未從 iPhone 傳輸真實資料。不得只憑 UUID 存取。
 - 目前不在設定頁出現假「備份成功」按鈕，不改本機完整備份與轉移、股票交易／FIFO、PWA、IndexedDB 或 v1.20.0，也沒有把私人紀錄放上 GitHub。
 
 ## 後端 A-2-2：首次裝置身分準備（Issue #53，進行中）
