@@ -62,6 +62,15 @@ The checked-in `wrangler.jsonc` already contains your public DB ID. **Do not ove
 
 **Important:** The frontend is not connected to this Worker. No CORS access is enabled for GitHub Pages yet. All `/v1/*` methods continue to return HTTP 503 `SYNC_NOT_ENABLED`; nobody can upload or download trades. GitHub Pages, browser IndexedDB and all existing financial records are unchanged.
 
+## First complete cloud backup (Issue #64, **not live**)
+
+- The first cloud backup must represent **all nine IndexedDB stores**, not only the active `reviewTrades` ledger. This is different from future A-4 incremental trade synchronization.
+- `src/cloud-backup-snapshot.ts` creates deterministic canonical JSON, a whole-snapshot SHA-256 digest and independently checked per-store hashes/counts. It reads via `snapshotLocalData()` from **one readonly IndexedDB transaction**, without modifying data. A 25 MB ceiling and nonempty protection prevent accidental empty or truncated backup acceptance.
+- `migrations/0003_first_cloud_backup.sql` adds `cloud_backup_snapshots` (owner-scoped snapshots with `staging` vs `verified` status) and `cloud_backup_entries` (owner+snapshot+store+record key, JSON body and SHA-256). This SQL is **not yet applied** to the real D1; no new Cloudflare interaction is needed until a safe authenticated upload API is ready.
+- **No cloud transfer is implemented or enabled yet.** Issue #53 authentication (secure sessions, Cloudflare abuse controls and device login integration) must pass before opening an authenticated upload/download route. Future server code must recompute the digest and all nine counts from D1, confirm before marking `verified`, use staging-safe transactions and support genuine restore tests. A successful HTTP status alone is never backup success.
+- Existing 0001/0002 were applied manually using Dashboard Console; do not run a blind `wrangler d1 migrations apply --remote` expecting those prior files to be in Wrangler's migration tracking.
+- Never commit backup bodies, credentials or private financial data to GitHub. Do not clear or replace IndexedDB while uploading. Preserve separate **off-device local exports** until cloud restore is verified.
+
 ## Planned secure sync (subsequent Issues)
 
 - A-2: identity provider, server-side validation and authorization, minimal origin allowlist, CSRF/session decisions.
