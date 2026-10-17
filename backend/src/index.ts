@@ -1,5 +1,4 @@
 import {handleGatedAuthRequest} from './auth-api'
-import type {EnrollmentD1} from './auth-registration'
 
 /**
  * OrderLead backend foundation only.
@@ -40,7 +39,7 @@ export async function handleRequest(request:Request,env:Env):Promise<Response>{
     // Every other /v1 route (especially backups) still returns 503.
     if(path.startsWith('/v1/auth/')&&
       env.AUTH_ROUTES_ENABLED==='true'&&env.AUTH_EDGE_PROTECTED==='true'){
-      return handleGatedAuthRequest(request,env.DB as unknown as EnrollmentD1)
+      return handleGatedAuthRequest(request,env.DB as unknown as Parameters<typeof handleGatedAuthRequest>[1])
     }
     return json(503,{error:'SYNC_NOT_ENABLED'})
   }
