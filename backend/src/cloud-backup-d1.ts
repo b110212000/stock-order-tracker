@@ -147,7 +147,7 @@ function validateOneRow(row:CloudBackupRow):void{
   if(item[key]!==row.recordKey)return invalid()
   // Reuse the full local backup validator to reject malformed trades,
   // unexpected dates, non-finite values and absent required fields.
-  const stores=Object.fromEntries(STORE_NAMES.map(name=>[name,[]])) as BackupStores
+  const stores=Object.fromEntries(STORE_NAMES.map(name=>[name,[]])) as unknown as BackupStores
   stores[row.storeName]=[value as StoreValue]
   validateFullBackup({
     format:BACKUP_FORMAT,schema:1,
@@ -209,7 +209,7 @@ async function rebuildStoredBackup(
   db:CloudBackupD1,userId:string,backupId:string,
   snapshot:SnapshotRow
 ):Promise<PreparedCloudBackup>{
-  const stores=Object.fromEntries(STORE_NAMES.map(name=>[name,[]])) as BackupStores
+  const stores=Object.fromEntries(STORE_NAMES.map(name=>[name,[]])) as unknown as BackupStores
   let offset=0
   // Paginate to avoid requesting all 25MB in one D1 result object.
   while(offset<=snapshot.record_count){
