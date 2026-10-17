@@ -46,7 +46,7 @@ class FakeRegistrationDb implements EnrollmentD1{
       }
     }
     // Preserve bound parameters for the transaction simulator below.
-    Object.assign(stmt,{get _params(){return params}})
+    Object.defineProperty(stmt,'_params',{get:()=>params})
     return stmt
   }
   async batch(stmts:EnrollmentStatement[]):Promise<Array<{meta:{changes:number}}>>{
