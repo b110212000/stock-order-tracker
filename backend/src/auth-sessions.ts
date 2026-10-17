@@ -118,16 +118,13 @@ export async function listMyAuthorizedDevices(
   db:EnrollmentD1,token:unknown,now=Date.now()
 ):Promise<ReadonlyArray<AuthorizedDeviceSummary>>{
   const owner=await authenticateDeviceSession(db,token,now)
-  // D1 min required interface only declares first/run: expand locally.
-  const readDb=db as EnrollmentD1&{
-    prepare(sql:string):ReturnType<EnrollmentD1['prepare']>&{
-      all<T>():Promise<{results:T[]}>
-    }
-  }
-  const query=readDb.prepare(
+  // The original D1 interface declares only first()/run(); this query
+  // explicitly needs D1PreparedStatement.all() for a scoped read.
+  const query=db.prepare(
     'SELECT d.device_id,d.label,d.last_seen_at,k.created_at FROM registered_devices d INNER JOIN authorized_device_keys k ON d.user_id=k.user_id AND d.device_id=k.device_id WHERE d.user_id=? AND k.revoked_at IS NULL ORDER BY k.created_at, d.device_id LIMIT 100'
-  )
-  query.bind(owner.userId)
+  ).bind(owner.userId) as ReturnType<EnrollmentD1['prepare']>&{
+    all<T>():Promise<{results:T[]}>
+  }
   const {results}=await query.all<DeviceRow>()
   return Object.freeze(results.map(row=>Object.freeze({
     deviceId:row.device_id,label:row.label,
