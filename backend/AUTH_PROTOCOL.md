@@ -8,6 +8,16 @@ Issue #53 second substep adds an **unexposed server enrollment module** at `back
 
 **Not production enabled:** the existing `backend/src/index.ts` continues returning HTTP 503 for all `/v1/*`, including registration. This is *not yet a working signup endpoint*. Do not activate it without Cloudflare edge/IP throttling, registration abuse mitigation, verified exact-origin restrictions and CORS, an offline recovery-key backup confirmation UI, persistently stored non-extractable CryptoKey, device login/session rules, real D1 atomicity tests, and iPhone validation. There are no new SQL migrations or changes to the deployed database in this substep. Continue to store zero user trades in D1 until the later authenticated sync phase.
 
+## Issue #53 — device login verification core, third substep (not publicly routed)
+
+`backend/src/auth-device-login.ts` adds a second **inert**, nonpublic server module for existing authorized devices. It issues a 120-second unpredictable nonce for exactly one valid, non-revoked `user_id + device_id` pair, saves only its hash and verifies a P-256 signed POST to `/v1/auth/login` over the **exact JSON body**. It rejects expired challenges, nonce tampering, malformed IDs, changes to the signed device and revoked keys. A single `D1.batch` atomically marks the challenge consumed with a unique marker, and conditionally updates both device-key verification and registered-device last-seen timestamps. The SQL rechecks revocation when it consumes the challenge.
+
+The return value identifies **only that one verified operation**. It is not a login token, bearer session, refresh token, authorization to read transactions or an account-recovery bypass. All public `/v1/*` routes remain blocked by `backend/src/index.ts`.
+
+`backend/src/auth-origin.ts` provides a strict Origin allowlist for the exact GitHub Pages origin `https://b110212000.github.io`. Only a development-mode call may additionally allow `http://localhost:5173` and `http://127.0.0.1:5173`. The helper is not imported by live Worker code. **CORS is not authentication**; enabling login requires enforcing these checks server-side alongside abuse prevention, CSRF/session controls and cryptographic validation.
+
+**Before enabling any authentication route**: demonstrate real D1 transaction semantics (unit-test mocks are not a substitute), implement Cloudflare-level rate limiting plus per-account attempts and challenge quotas, design secure expiring/rotating sessions with revocation, persist non-extractable browser keys safely, require offline recovery-key backup confirmation, and validate iPhone PWA storage/recovery. Do not pass verified UUIDs from any unchecked client request straight to downstream queries.
+
 ## Goals and trust boundaries
 
 - User UUID (random v4) identifies one person's data under the owner's Cloudflare D1. Device UUID (random v4) identifies an installation. **Neither UUID grants access, ever.**
