@@ -17,6 +17,11 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run backend:typecheck
+      - name: Validate Worker bundle without Cloudflare credentials
+        run: |
+          cd backend
+          npm install --no-audit --no-fund
+          npx wrangler deploy --dry-run --outdir .wrangler-preview
       - run: npm test
       - run: npm run build
         env:

@@ -4,27 +4,63 @@
 
 **Current state: backend foundation only. Real trade synchronization is NOT enabled.** The React PWA stays on GitHub Pages and all existing transactions remain only in its IndexedDB until the later explicit, authenticated import step.
 
-## Local setup
+## Cloudflare Dashboard-only deployment (Issue #59)
 
-Node.js 22+ required. Run from the repository root:
+**No Git/Node.js/Wrangler installation on your phone or computer is required.** The `backend/wrangler.jsonc` file is deliberately committed: it contains the non-secret D1 **resource UUID**, but **never** an API token, recovery key, user's records or credentials.
 
-1. In Cloudflare Dashboard, open **Workers & Pages → D1 SQL Database** (UI names may differ), create a database named `orderlead-db`. Copy the returned **database ID**, *not* an API token.
-2. `cd backend`
-3. `npm install`
-4. `cp wrangler.example.jsonc wrangler.jsonc` (Windows PowerShell: `Copy-Item wrangler.example.jsonc wrangler.jsonc`).
-5. Edit `wrangler.jsonc` and replace `REPLACE_WITH_YOUR_D1_DATABASE_ID` with the real D1 database ID. **Do not commit this file.**
-6. `npx wrangler d1 migrations apply DB --local` (builds only a simulated local database).
-7. `npx wrangler dev --local` then visit `http://127.0.0.1:8787/health`; success returns `{"service":"orderlead-api","status":"ok"}`.
-8. `npx tsc --noEmit` checks backend TypeScript.
+The user already created D1 `orderlead-db` in their own Cloudflare account. The checked-in Wrangler binding is `DB`, matching the Worker code's `env.DB`.
 
-## Actual deployment (only after reviewing security and configuration)
+### 1. Connect GitHub to Workers Builds
 
-- `npx wrangler login` in your own terminal. Never share credentials or paste access tokens into GitHub files or chat.
-- `npx wrangler d1 migrations apply DB --remote` creates the empty schema in your Cloudflare account.
-- `npx wrangler deploy` deploys the **locked-down** Worker. The only working route is `GET /health`.
-- To avoid using a production D1 while testing, use the local mode above. Treat `--remote` as a deliberate, separate step.
+Cloudflare Dashboard → Workers & Pages → Create application → Workers → Import from Git (the exact navigation labels can change):
 
-**Important:** The frontend is not connected to this Worker in Issue #50. No CORS access is enabled for GitHub Pages yet. `/v1/*` routes always return HTTP 503 `SYNC_NOT_ENABLED`; POST/PUT/PATCH/DELETE cannot read or write personal trades.
+| Field | Value |
+| --- | --- |
+| Repository | `b110212000/stock-order-tracker` |
+| Branch | `main` |
+| Worker/project name | `orderlead-api` |
+| Advanced settings → Path / Root directory | `/backend` |
+| Build command | `npm run typecheck` |
+| Deploy command | `npx wrangler deploy` |
+| Preview command | `npx wrangler preview` |
+| API token | Create new token, e.g. `orderlead-deploy`; **do not paste it into GitHub or chat** |
+| Build environment variables | None needed |
+
+**Do not use the repo root's `npm run build`**: that builds the React frontend, not this Worker. Cloudflare runs all commands from the configured `/backend` root and installs dependencies from that directory.
+
+### 2. Click Deploy, check the Worker binding
+
+After GitHub main contains `backend/wrangler.jsonc`, click Deploy. The Worker should be named `orderlead-api` and bound to D1 `orderlead-db` as `DB`. Open the deployed `https://<your-subdomain>.workers.dev/health`: expected `{"service":"orderlead-api","status":"ok"}`.
+
+If deployment fails, check that the **Path is /backend** and the Build command uses `npm run typecheck`. If `/health` returns 503, check the `DB` binding, DB UUID and Worker logs. A successful `/health` only verifies basic SQL connectivity (`SELECT 1`); **it does not prove database tables exist or enable account/sync APIs**.
+
+### 3. Create empty D1 schema using only the Dashboard
+
+Workers deployment does **not** run D1 migrations automatically, and Cloudflare's automatically generated Workers Builds API token **does not include D1 Edit permission** by default. Keep `npx wrangler deploy` as the deploy command; do **not** insert remote migrations into it.
+
+For a browser-only first setup, open Cloudflare Dashboard → D1 → `orderlead-db` → Console, then execute the full SQL files in this order:
+
+1. [`migrations/0001_foundation.sql`](migrations/0001_foundation.sql) — tables for users, devices, scoped transaction records and change history.
+2. [`migrations/0002_auth_credentials.sql`](migrations/0002_auth_credentials.sql) — hashed recovery verifiers, authorized device public keys, one-time auth challenges.
+
+Copy each file's **complete SQL**, paste into Cloudflare D1 Console and execute, then verify the tables are present. These SQL files create the schema only; no user accounts, keys or real transactions are inserted.
+
+**Migration accounting caveat:** Running raw SQL in the D1 Console does not update Wrangler's `d1_migrations` tracking table. If you later run `wrangler d1 migrations apply --remote`, Wrangler may propose running the prior idempotent `CREATE TABLE IF NOT EXISTS` scripts again. Review the plan first; for future changes, prefer an authenticated Wrangler migration workflow with D1 Edit permission and tracked migration history. Never delete or reset D1 to "fix" migration records.
+
+### Optional: Wrangler CLI if you prefer a local/CI environment later
+
+From `backend/` with Node.js 22+ installed:
+
+```bash
+npm install
+npx wrangler login
+npx wrangler d1 migrations apply DB --local
+npx wrangler dev
+```
+
+The checked-in `wrangler.jsonc` already contains your public DB ID. **Do not overwrite it using `wrangler.example.jsonc`** (that example remains only for creating a brand-new Cloudflare deployment on another account). To apply tracked migrations remotely with a properly authorized token: `npx wrangler d1 migrations apply DB --remote`; do not attempt this in Workers Builds without explicit D1 Edit permission.
+
+**Important:** The frontend is not connected to this Worker. No CORS access is enabled for GitHub Pages yet. All `/v1/*` methods continue to return HTTP 503 `SYNC_NOT_ENABLED`; nobody can upload or download trades. GitHub Pages, browser IndexedDB and all existing financial records are unchanged.
 
 ## Planned secure sync (subsequent Issues)
 

@@ -66,11 +66,16 @@ test('D1 migration is owner-scoped, requires verified identity and keeps delete 
   assert.doesNotMatch(sql,/INSERT INTO|REPLACE INTO|DROP TABLE/)
 })
 
-test('real Cloudflare credentials and database IDs are not committed',()=>{
+test('real Cloudflare credentials stay private; D1 resource UUID is public config',()=>{
   const example=readFileSync(new URL('../backend/wrangler.example.jsonc',import.meta.url),'utf8')
   const ignore=readFileSync(new URL('../backend/.gitignore',import.meta.url),'utf8')
   assert.match(example,/REPLACE_WITH_YOUR_D1_DATABASE_ID/)
-  assert.match(ignore,/wrangler\.jsonc/)
+  assert.doesNotMatch(ignore,/^wrangler\.jsonc$/m)
+  const config=JSON.parse(readFileSync(new URL('../backend/wrangler.jsonc',import.meta.url),'utf8'))
+  assert.match(config.d1_databases[0].database_id,/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/)
+  assert.equal(config.d1_databases[0].binding,'DB')
+  assert.equal(config.name,'orderlead-api')
+  assert.doesNotMatch(JSON.stringify(config),/api[_-]?token|secret|password|recovery[_-]?key|authorization/i)
   assert.match(ignore,/\.dev\.vars/)
   const source=readFileSync(new URL('../backend/src/index.ts',import.meta.url),'utf8')
   assert.doesNotMatch(source,/Authorization: Bearer|SECRET_KEY=|API_TOKEN=/)
