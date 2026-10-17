@@ -124,9 +124,11 @@ export async function listMyAuthorizedDevices(
       all<T>():Promise<{results:T[]}>
     }
   }
-  const {results}=await readDb.prepare(
+  const query=readDb.prepare(
     'SELECT d.device_id,d.label,d.last_seen_at,k.created_at FROM registered_devices d INNER JOIN authorized_device_keys k ON d.user_id=k.user_id AND d.device_id=k.device_id WHERE d.user_id=? AND k.revoked_at IS NULL ORDER BY k.created_at, d.device_id LIMIT 100'
-  ).bind(owner.userId).all<DeviceRow>()
+  )
+  query.bind(owner.userId)
+  const {results}=await query.all<DeviceRow>()
   return Object.freeze(results.map(row=>Object.freeze({
     deviceId:row.device_id,label:row.label,
     lastSeenAt:row.last_seen_at,createdAt:row.created_at
