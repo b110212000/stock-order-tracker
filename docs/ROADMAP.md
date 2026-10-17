@@ -33,6 +33,7 @@
 | v1.18.1 | 交易表單緊湊手機單欄及鍵盤儲存列 RWD（Issue #41）；備份操作與設定頁依可用容器寬度適配（Issue #42） |
 | v1.18.2 | 恢復交易新增／編輯在 375px 以上雙欄，修正 iOS 日期時間欄位在手機過窄時的溢出，保留極窄裝置單欄和鍵盤固定儲存列（Issue #43） |
 | v1.19.0 | iPhone 日期／時間欄位修正、交易方向支援定期定額（FIFO 視買入）、成交時間選填及空白時採 10:45；README 記錄預設規則（Issue #45） |\n| 後續待排 | 輸入股票代號自動帶入名稱，另開 Issue #46，v1.19.0 不實作 |\n| v1.19.1 | 編輯補登缺時間的交易時直接顯示已儲存的 10:45，保留時間來源標記；不覆蓋既有實際成交時間（Issue #45 延續修正） |\n| v1.20.0 | 輸入股票代號自動填入股票名稱，上市／上櫃／ETF；本地離線快照、查不到手填，編輯不覆蓋原名稱（Issue #46） |\n| Backend A-1 | Workers + D1 只建立基礎架構、資料表與安全鎖定的健康 API；前端 GitHub Pages / IndexedDB 不動，不啟用同步（Issue #50） |
+| Backend A-1 GitHub 部署設定 | Cloudflare D1 `orderlead-db` 正式綁定 `orderlead-api`、從 `/backend` 線上部署；遠端部署及 SQL migration 仍須使用者驗收（Issue #59） |
 | Backend A-2-1 | User UUID / Device UUID 僅識別，256-bit 恢復金鑰＋設備 P-256 簽章協定、D1 認證表及測試（Issue #52，API 繼續鎖定） |
 | Backend A-2-2 | 首次安全註冊及設備登入（Issue #53） |
 | Backend A-2-3 | 已授權裝置掃碼授權新設備（Issue #54） |
