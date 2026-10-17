@@ -13,6 +13,7 @@ React + Vite + TypeScript，GitHub Pages 部署；支援安裝 iPhone PWA、手�
 - 新增獨立 `src/cloud-identity.ts`，讓未來註冊流程能產生 User UUID、Device UUID、256-bit 恢復金鑰，以及**無法匯出**的設備 P-256 私鑰；支援簽署由伺服器提供的登入挑戰。
 - 目前僅為**可測試的前端安全工具**，沒有匯入 App 畫面、沒有啟用註冊或登入 API，也沒有在手機 IndexedDB 寫入任何新記錄。
 - 第二部分已加入尚未啟用的伺服器端註冊模組（`backend/src/auth-registration.ts`）：產生限時挑戰、驗證新設備簽章，並以 D1 原子交易準備建立帳戶與公鑰。**公開 `/v1/*` 仍全面停用（503）**，不能宣稱已可登入。
+- 第三部分加入**未接通公開路由**的設備登入驗證（`backend/src/auth-device-login.ts`）：使用已授權設備的公鑰驗證 120 秒限時挑戰，檢查撤銷狀態並原子消耗挑戰。同時新增 `backend/src/auth-origin.ts` 嚴格驗證 GitHub Pages Origin；開發用 localhost 僅允許 development。UUID 本身不提供存取權。
 - 接下來仍須完成伺服器限速與濫用防護、真正的路由登入/Session、恢復金鑰備份確認、真實 D1 與 iPhone 端到端驗證，才能允許使用者真正註冊。
 - 原交易資料、GitHub Pages 及 v1.20.0 全部不變，沒有任何雲端交易同步。
 
