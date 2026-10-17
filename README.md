@@ -8,6 +8,13 @@ https://b110212000.github.io/stock-order-tracker/
 
 React + Vite + TypeScript，GitHub Pages 部署；支援安裝 iPhone PWA、手機／桌面 RWD 及深色／淺色模式。
 
+## Cloudflare Workers 線上部署設定（Issue #59）
+
+- 使用者已建立自己的 `orderlead-db` D1；`backend/wrangler.jsonc` 已提交非秘密的 D1 UUID 與 `DB` 綁定，Worker 專案名稱 `orderlead-api`。
+- 透過 Cloudflare Workers Builds 連接同一個 GitHub 倉庫，**Root Path = `/backend`**、**Build command = `npm run typecheck`**、**Deploy command = `npx wrangler deploy`**；Cloudflare 自動建立獨立 `orderlead-deploy` Token，切勿公開 Token。
+- D1 資料表遷移 **不會隨 Worker deploy 自動執行**。Cloudflare 內建部署 Token 預設沒有 D1 Edit 權限；請依 [backend/README.md](backend/README.md) 用 D1 Console 在瀏覽器建立空表，或另行安全授權的 migration workflow。成功回傳 `/health` 不代表資料表或同步已完成。
+- 不改 GitHub Pages、PWA、v1.20.0 或既有 IndexedDB／買賣交易；`/v1/*` 同步／登入路由繼續鎖定。
+
 ## 免帳密雲端身分規劃（A-2-1，Issue #52）
 
 - 規劃使用 `User UUID` 識別帳號、`Device UUID` 識別每台裝置，**UUID 本身不提供任何資料讀取權限**。
