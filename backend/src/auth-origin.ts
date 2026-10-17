@@ -35,8 +35,8 @@ export function authCorsHeaders(origin:string,mode:AuthRuntimeMode='production')
   const headers=new Headers()
   headers.set('Access-Control-Allow-Origin',origin)
   headers.set('Vary','Origin')
-  headers.set('Access-Control-Allow-Methods','POST,OPTIONS')
-  headers.set('Access-Control-Allow-Headers','Content-Type,X-OrderLead-Nonce,X-OrderLead-Signature')
+  headers.set('Access-Control-Allow-Methods','GET,POST,OPTIONS')
+  headers.set('Access-Control-Allow-Headers','Authorization,Content-Type,X-OrderLead-Nonce,X-OrderLead-Signature')
   headers.set('Access-Control-Max-Age','300')
   return headers
 }
