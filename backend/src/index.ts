@@ -36,6 +36,12 @@ export async function handleRequest(request:Request,env:Env):Promise<Response>{
   // All synchronization paths are locked before verified account-based
   // authorization and conflict handling ship. Never accept anonymous writes.
   if(path==='/v1'||path.startsWith('/v1/')){
+    // Two independent opt-in gates. Both are unset by default.
+    // Every other /v1 route (especially backups) still returns 503.
+    if(path.startsWith('/v1/auth/')&&
+      env.AUTH_ROUTES_ENABLED==='true'&&env.AUTH_EDGE_PROTECTED==='true'){
+      return handleGatedAuthRequest(request,env.DB as unknown as EnrollmentD1)
+    }
     return json(503,{error:'SYNC_NOT_ENABLED'})
   }
 
