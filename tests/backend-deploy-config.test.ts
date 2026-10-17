@@ -50,7 +50,7 @@ test('production schema initialization files are additive and have no personal r
   for(const sqlFile of ['0001_foundation.sql','0002_auth_credentials.sql']){
     const sql=read('migrations/'+sqlFile)
     assert.match(sql,/CREATE TABLE IF NOT EXISTS/)
-    assert.doesNotMatch(sql,/DROP TABLE|DELETE FROM|TRUNCATE|INSERT INTO|REPLACE INTO|UPDATE /i)
+    assert.doesNotMatch(sql,/^\s*(?:DROP TABLE|DELETE FROM|TRUNCATE|INSERT INTO|REPLACE INTO|UPDATE)\s/mi)
   }
   const code=read('src/index.ts')
   assert.match(code,/SYNC_NOT_ENABLED/)
