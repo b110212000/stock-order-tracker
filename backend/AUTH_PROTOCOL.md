@@ -1,6 +1,10 @@
 # OrderLead A-2 passwordless identity protocol (security design, not live API)
 
-Status: **A-2-1 only**. No authenticated API endpoints, accounts or cloud sync are enabled. GitHub Pages, current IndexedDB and all financial records remain untouched.
+Status: **A-2-1 plus the first, inert A-2-2 client cryptography module**. No authenticated API endpoints, accounts or cloud sync are enabled. GitHub Pages, current IndexedDB and all financial records remain untouched.
+
+Issue #53 first substep is `src/cloud-identity.ts`: `createPendingCloudIdentity()` generates separate CSPRNG user/device UUID v4, a 256-bit backup key and a non-extractable P-256 device signing key. `signCloudDeviceRequest()` signs the server's nonce with the existing canonical request format; it validates timestamp but **does not replace server-side validation, atomic nonce consumption or endpoint authorization**. Neither function is imported by the live PWA. Generation happens only when a later UI explicitly starts registration; **calling this function does not register an account or upload existing data**.
+
+Next substeps within #53 must implement authenticated registration and signed login, rate limits, persistent non-extractable keys, off-device recovery-key backup confirmation and API tests before enabling any UI. Do not store plaintext recovery keys in IndexedDB or server logs. Keep the existing /v1/* HTTP 503 gate until all required pieces are ready.
 
 ## Goals and trust boundaries
 
