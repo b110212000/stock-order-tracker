@@ -47,6 +47,8 @@ test('CORS emits only exact requested allowed origin, never a wildcard',()=>{
   assert.equal(headers.get('Access-Control-Allow-Methods'),'POST,OPTIONS')
   assert.throws(()=>authCorsHeaders('https://b110212000.github.io.evil.example'),
     /INVALID_CORS_ORIGIN/)
+  assert.throws(()=>authCorsHeaders('http://localhost:5173'),/INVALID_CORS_ORIGIN/)
+  assert.equal(authCorsHeaders('http://localhost:5173','development').get('Access-Control-Allow-Origin'),'http://localhost:5173')
 })
 
 test('origin helper not imported by live Worker, all auth preflight requests stay locked',async()=>{
