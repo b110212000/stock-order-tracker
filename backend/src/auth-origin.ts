@@ -17,8 +17,7 @@ export function allowedAuthOrigin(
   request:Request,mode:AuthRuntimeMode='production'
 ):string|null{
   const origin=request.headers.get('Origin')
-  if(!origin||origin==='null'||origin.includes('/')&&
-    !origin.startsWith('http://')&&!origin.startsWith('https://'))return null
+  if(!origin||origin==='null')return null
   try{
     const url=new URL(origin)
     if(url.origin!==origin||url.username||url.password)return null
@@ -29,8 +28,8 @@ export function allowedAuthOrigin(
 }
 
 /** Invoke only AFTER allowedAuthOrigin and backend authentication gates. */
-export function authCorsHeaders(origin:string):Headers{
-  if(origin!==productionOrigin&&!localOrigins.has(origin)){
+export function authCorsHeaders(origin:string,mode:AuthRuntimeMode='production'):Headers{
+  if(origin!==productionOrigin&&!(mode==='development'&&localOrigins.has(origin))){
     throw Error('INVALID_CORS_ORIGIN')
   }
   const headers=new Headers()
