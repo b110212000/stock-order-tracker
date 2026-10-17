@@ -28,6 +28,14 @@ The return value identifies **only that one verified operation**. It is not a lo
 
 **Security gate stays closed**: `backend/src/index.ts` still returns `503 SYNC_NOT_ENABLED` for every `/v1/*`, these modules are not imported by it, there is no live login, recovery, access to device list or cloud backup, and the current local IndexedDB/version remain untouched. Next: safely wire auth routes, check CORS/Origin, integrate rate protection and real D1 tests, save signing CryptoKey and display/off-device-confirm recovery key, then run iPhone E2E acceptance before allowing financial backups.
 
+## Issue #53 step 5 — double-gated auth API router (still NOT enabled)
+
+`backend/src/auth-api.ts` now defines browser-facing auth routes (registration challenge, signed registration, signed device login challenge, session issuance, device list, and logout) with exact GitHub Pages `Origin` checks, strict CORS preflight, input size bounds, Cloudflare ingress IP + account rate quotas and no secrets in query parameters. Device listing requires a 15-minute session derived from verified proof, not any user-supplied UUID. Real transaction/backup routes remain disabled.
+
+`backend/src/index.ts` invokes this handler **only when BOTH `AUTH_ROUTES_ENABLED='true'` AND `AUTH_EDGE_PROTECTED='true'` are set**. Neither flag exists in committed Wrangler configuration or the user's Cloudflare Worker environment; they must remain unset until all production safeguards and real-device tests are done. One flag alone does nothing. All ordinary `/v1/*` calls still return HTTP 503.
+
+**Do not enable either flag yet.** Deployment requirements: manually apply and verify `0004_auth_sessions_limits.sql` on the user's existing Cloudflare D1 after separately verifying current 0001–0003 schema (do not run a blind migration history replay), configure real Cloudflare edge rate limits/WAF, test registration and session revocation with actual D1 including races and failure injection, build a PWA UI that durably saves the non-extractable CryptoKey without storing the recovery key, require explicit out-of-device recovery key backup acknowledgement, and test iPhone Safari/PWA onboarding. Only then expose auth APIs to real users; cloud financial-data uploads are a separate secured follow-up.
+
 ## Goals and trust boundaries
 
 - User UUID (random v4) identifies one person's data under the owner's Cloudflare D1. Device UUID (random v4) identifies an installation. **Neither UUID grants access, ever.**
