@@ -9,7 +9,7 @@ import {STORE_NAMES} from './db'
 import {buildBackup,MAX_BACKUP_BYTES,summarizeBackup,validateFullBackup} from './backup-data'
 import {snapshotLocalData} from './backup-storage'
 import type {OrderLeadBackup} from './backup-data'
-import type {Store} from './types'
+import type {Store,StoreValue} from './types'
 
 export const CLOUD_BACKUP_FORMAT='orderlead-cloud-snapshot-v1'
 export type CloudBackupManifest=Readonly<{
@@ -92,7 +92,7 @@ export async function buildCloudBackupSnapshot(source:OrderLeadBackup):Promise<P
   const counts={} as Record<Store,number>
   const storeSha256={} as Record<Store,string>
   for(const store of STORE_NAMES){
-    stores[store]=sortByKey(copied.stores[store],store) as typeof stores[typeof store]
+    stores[store]=sortByKey(copied.stores[store],store) as StoreValue[]
     counts[store]=stores[store].length
     storeSha256[store]=await digestHex(stableJson(stores[store]))
   }
@@ -101,6 +101,7 @@ export async function buildCloudBackupSnapshot(source:OrderLeadBackup):Promise<P
   if(byteLength===0||byteLength>MAX_BACKUP_BYTES)
     throw Error('首次雲端備份超過 25 MB 限制')
   const aggregate=summarizeBackup({...copied,stores})
+  if(aggregate.total===0)throw Error('空白資料不能標記為首次雲端備份')
   return {
     canonicalPayload,
     manifest:{
