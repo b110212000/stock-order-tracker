@@ -39,7 +39,8 @@
 | Backend A-2-3 | 已授權裝置掃碼授權新設備（Issue #54） |
 | Backend A-2-4 | 恢復金鑰救援、設備撤銷、限速及濫用防護（Issue #55） |
 | Backend A-3.1 | 首次完整雲端備份：9 表一致性快照、排序與 SHA-256、D1 快照結構；尚未上傳真實資料（Issue #64） |
-| Backend A-3.2 至 A-5 | 登入安全驗收完成後再開授權的 D1 分批上傳、伺服器重算雜湊與筆數、還原演練；繼續雙向同步和獨立備份 |
+| Backend A-3.2 | 未公開的 D1 分批儲存、斷線重試、九表重新核對與 verified 讀回核心（Issue #66）；**正式 API、Session、Cloudflare D1 0003、實際上傳與 iPhone 驗收尚未完成** |
+| Backend A-4 至 A-5 | Issue #53 安全認證完成後才啟用雲端上傳、換機還原、雙向同步和獨立備份 |
 | B（待決策） | 僅待 A 完成驗收後再考慮前端搬到 Cloudflare；沿用已驗證的 Workers/D1 |
 | v2.0.0 | 後端、行情、GPT API、真正 Web Push |
 
