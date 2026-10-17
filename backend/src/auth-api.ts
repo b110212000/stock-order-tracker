@@ -31,7 +31,6 @@ const allowedRoutes=new Set([
   '/v1/auth/devices',
   '/v1/auth/logout'
 ])
-const textEncoder=new TextEncoder()
 
 function json(status:number,data:Record<string,unknown>,origin:string,mode:AuthRuntimeMode):Response{
   const headers=new Headers(responseBase)
@@ -142,7 +141,6 @@ export async function handleGatedAuthRequest(
     if(route==='/v1/auth/login-challenge'){
       // Reserve an IP attempt BEFORE UUID parsing/lookup, preventing
       // probing the existence of user/device identifiers without a budget.
-      await reserveAuthAttempt(db,'device-challenge',ip,now)
       const raw=await limitedText(req,512)
       const pair=readIdPair(raw)
       await reserveAuthAttempt(db,'device-challenge',ip,now,pair.userId)
@@ -161,12 +159,11 @@ export async function handleGatedAuthRequest(
       return json(201,result,origin,mode)
     }
     if(route==='/v1/auth/login'){
-      await reserveAuthAttempt(db,'device-login',ip,now)
       if(req.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase()!=='application/json')
         throw Error('AUTH_FAILED')
       const raw=await limitedText(req,1024)
       const userId=extractUserForThrottle(raw)
-      if(userId)await reserveAuthAttempt(db,'device-login',ip,now,userId)
+      await reserveAuthAttempt(db,'device-login',ip,now,userId)
       const proof=await verifyDeviceLogin(db,raw,{
         nonce:req.headers.get('X-OrderLead-Nonce')??'',
         signature:req.headers.get('X-OrderLead-Signature')??''
