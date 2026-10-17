@@ -1,6 +1,7 @@
 node_modules/
 .wrangler/
-wrangler.jsonc
+# wrangler.jsonc contains only public Worker/D1 resource identifiers;
+# tracked for Cloudflare Git integration. Keep real secrets in .dev.vars.
 .dev.vars
 .dev.vars.*
 .env
