@@ -36,6 +36,14 @@ The return value identifies **only that one verified operation**. It is not a lo
 
 **Do not enable either flag yet.** Deployment requirements: manually apply and verify `0004_auth_sessions_limits.sql` on the user's existing Cloudflare D1 after separately verifying current 0001–0003 schema (do not run a blind migration history replay), configure real Cloudflare edge rate limits/WAF, test registration and session revocation with actual D1 including races and failure injection, build a PWA UI that durably saves the non-extractable CryptoKey without storing the recovery key, require explicit out-of-device recovery key backup acknowledgement, and test iPhone Safari/PWA onboarding. Only then expose auth APIs to real users; cloud financial-data uploads are a separate secured follow-up.
 
+## Issue #53 — safe local CryptoKey persistence (part 6, not live)
+
+`src/cloud-device-storage.ts` prepares an isolated IndexedDB database `orderlead-cloud-auth`, version 1, containing exactly one active pending/registered P-256 device credential. It uses **IndexedDB structured clone** to persist the `CryptoKey` with `extractable=false`; it never exports private signing key bytes. `savePendingCloudDevice(..., confirmedOfflineRecoveryBackup=true)` must be called only after the onboarding screen displays the random recovery secret ONCE and the user explicitly confirms storing it outside the device. The plaintext recovery secret and short-lived server Session token are NEVER persisted or logged. The separate `orderlead-local` nine-store financial database is not opened, altered, upgraded or cleared.
+
+Identity persistence is deliberately **non-overwriting**: `add`, not `put`, rejects a second identity, including an interrupted registration whose server result is uncertain. The marker becomes `registered` only after matching server-confirmed User UUID and Device UUID. On restart `readCloudDevice()` returns the device credential but never the recovery secret. A user with `pending` must first try a cryptographically signed login/resume, not silently regenerate a new identity or erase a potentially registered device. Do not include a reset/discard button until orphan-account recovery is specified.
+
+**Not live**: This module is unreferenced by the public React app and does NOT call Cloudflare, send registration requests, or create a server account. Next implement the protected recovery key onboarding UI, secure network orchestration, true Worker/D1 tests and iPhone/Safari storage acceptance. No cloud trading-data backup is enabled.
+
 ## Goals and trust boundaries
 
 - User UUID (random v4) identifies one person's data under the owner's Cloudflare D1. Device UUID (random v4) identifies an installation. **Neither UUID grants access, ever.**
