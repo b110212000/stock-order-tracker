@@ -78,7 +78,7 @@ export default function SettingsPage({version,hasUpdate,checking,repairing,statu
       {backupOpen&&<BackupPanel version={version}/>}
       <div className="settings-item">
         <div className="settings-item-icon"><Cloud size={20}/></div>
-        <div className="settings-item-label"><strong>雲端帳號</strong><small>本機金鑰準備 · 雲端尚未開放</small></div>
+        <div className="settings-item-label"><strong>雲端帳號</strong><small>Email＋密碼登入 · 開發中</small></div>
         <button type="button" className="settings-action" aria-expanded={cloudOpen}
           aria-controls="orderlead-cloud-account"
           onClick={()=>setCloudOpen(value=>!value)}>
