@@ -37,7 +37,7 @@
 | Backend A-1 | Workers + D1 只建立基礎架構、資料表與安全鎖定的健康 API；前端 GitHub Pages / IndexedDB 不動，不啟用同步（Issue #50） |
 | Backend A-1 GitHub 部署設定 | Cloudflare D1 `orderlead-db` 正式綁定 `orderlead-api`、從 `/backend` 線上部署；遠端部署及 SQL migration 仍須使用者驗收（Issue #59） |
 | Backend A-2-1 | User UUID / Device UUID 僅識別，256-bit 恢復金鑰＋設備 P-256 簽章協定、D1 認證表及測試（Issue #52，API 繼續鎖定） |
-| Backend A-2-2 | 首次安全註冊與設備登入（Issue #53）：已完成雙重旗標預設關閉的認證 API、15 分鐘 Session、Origin、防重放、限速及**已接設定頁**的本機私鑰/恢復金鑰準備 UI；0004 使用者回報完成，尚需獨立 D1 表驗證、Cloudflare edge 防護、PWA 真實登入/Session 及 iPhone E2E 驗收 |
+| Backend A-2-2 | **2026-10-19 已更改主要認證架構**：Email＋自訂密碼與 Email 忘記密碼；#73 新增 additive 0005、加鹽及 Cloudflare Secret pepper 的 PBKDF2 核心、Email token、設計與 UI 過渡；0005 尚未套真實 D1、尚無發信/登入/找回 API，edge 保護與 iPhone 測試待做（Issue #53） |
 | Backend A-2-3 | 已授權裝置掃碼授權新設備（Issue #54） |
 | Backend A-2-4 | 恢復金鑰救援、設備撤銷、限速及濫用防護（Issue #55） |
 | Backend A-3.1 | 首次完整雲端備份：9 表一致性快照、排序與 SHA-256、D1 快照結構；尚未上傳真實資料（Issue #64） |
