@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
-import { ChevronRight, CloudDownload, Copy, DatabaseBackup, FileDown, RefreshCcw, Share2, ShieldCheck } from 'lucide-react'
+import { ChevronRight, Cloud, CloudDownload, Copy, DatabaseBackup, FileDown, RefreshCcw, Share2, ShieldCheck } from 'lucide-react'
 import './SettingsPage.css'
 import BackupPanel from './BackupPanel'
+import CloudAccountPanel from './CloudAccountPanel'
 
 type Props={
   version:string
@@ -17,6 +18,7 @@ type Props={
 export default function SettingsPage({version,hasUpdate,checking,repairing,status,error,onCheck,onUpdate,onRepair}:Props){
   const [shareOpen,setShareOpen]=useState(false)
   const [backupOpen,setBackupOpen]=useState(false)
+  const [cloudOpen,setCloudOpen]=useState(false)
   const [shareStatus,setShareStatus]=useState('')
   const linkRef=useRef<HTMLInputElement>(null)
   const url=new URL(import.meta.env.BASE_URL,window.location.origin).href
@@ -74,6 +76,16 @@ export default function SettingsPage({version,hasUpdate,checking,repairing,statu
         </button>
       </div>
       {backupOpen&&<BackupPanel version={version}/>}
+      <div className="settings-item">
+        <div className="settings-item-icon"><Cloud size={20}/></div>
+        <div className="settings-item-label"><strong>雲端帳號</strong><small>本機金鑰準備 · 雲端尚未開放</small></div>
+        <button type="button" className="settings-action" aria-expanded={cloudOpen}
+          aria-controls="orderlead-cloud-account"
+          onClick={()=>setCloudOpen(value=>!value)}>
+          {cloudOpen?'收合':'管理'} <ChevronRight size={16}/>
+        </button>
+      </div>
+      {cloudOpen&&<div id="orderlead-cloud-account"><CloudAccountPanel/></div>}
       <div className="settings-item settings-version">
         <div className="settings-item-icon"><CloudDownload size={20}/></div>
         <div className="settings-item-label"><strong>版本更新</strong><small>目前 v{version}</small></div>
