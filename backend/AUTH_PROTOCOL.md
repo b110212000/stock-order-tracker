@@ -1,4 +1,12 @@
-# OrderLead A-2 passwordless identity protocol (security design, not live API)
+# OrderLead 認證規格：Email＋自訂密碼（目前未上線）
+
+**2026-10-19 使用者確認新主要登入方式為 Email＋密碼，使用 Email 找回密碼。**
+請先看 [EMAIL_PASSWORD_AUTH.md](EMAIL_PASSWORD_AUTH.md)（現行設計）。
+以下的 UUID＋設備簽章／恢復金鑰方案為之前的歷史實作；不能再當作主要註冊流程。舊金鑰和資料仍需安全保留，正式 API 和備份預設關閉。
+
+---
+
+## Historical: A-2 passwordless identity protocol (superseded by Email/password)
 
 Status: **A-2-1 plus the first, inert A-2-2 client cryptography module**. No authenticated API endpoints, accounts or cloud sync are enabled. GitHub Pages, current IndexedDB and all financial records remain untouched.
 
