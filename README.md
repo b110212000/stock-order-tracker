@@ -25,7 +25,8 @@ React + Vite + TypeScript，GitHub Pages 部署；支援安裝 iPhone PWA、手�
 - 第三部分加入**未接通公開路由**的設備登入驗證（`backend/src/auth-device-login.ts`）：使用已授權設備的公鑰驗證 120 秒限時挑戰，檢查撤銷狀態並原子消耗挑戰。同時新增 `backend/src/auth-origin.ts` 嚴格驗證 GitHub Pages Origin；開發用 localhost 僅允許 development。UUID 本身不提供存取權。
 - 第四部分新增**尚未啟用**的 `backend/src/auth-sessions.ts`（15 分鐘短效、設備撤銷立即失效、伺服器只存 Token 雜湊）及 `backend/src/auth-rate-limits.ts`（依 Cloudflare 來源 IP 與使用者做五分鐘計數）；`backend/migrations/0004_auth_sessions_limits.sql` 仍**尚未執行於正式 D1**。
 - 第五部分加入 `backend/src/auth-api.ts`，整合註冊挑戰、設備簽章登入、短效 Session、設備清單與登出路由；**必須同時設定 `AUTH_ROUTES_ENABLED=true` 與 `AUTH_EDGE_PROTECTED=true` 才能啟用**。這兩個設定目前都未配置，因此公開 `/v1/*` 仍然 503，雲端備份仍不開放。
-- 需要先在真實 D1 驗收 0004、開啟 Cloudflare 邊緣保護、完成金鑰 UI 與 iPhone 測試後才可考慮啟用兩個旗標。不要現在開啟。
+- 第六部分新增 `src/cloud-device-storage.ts`：使用**獨立**的 `orderlead-cloud-auth` IndexedDB 儲存不可匯出設備私鑰（CryptoKey structured clone），需要事先確認恢復金鑰已另外備份；**不會把恢復金鑰寫入本機資料庫**，不會覆蓋另一台／已註冊帳號，也不改九張交易資料表。此程式目前未接入正式 PWA。
+- 使用者已回報 0004 在 Cloudflare D1 執行成功，但**尚未由程式獨立查驗**。需要先在真實 D1 驗收資料表、開啟 Cloudflare 邊緣保護、完成一次性恢復金鑰 UI 與 iPhone 測試後才可考慮啟用兩個旗標。不要現在開啟。
 - 原交易資料、GitHub Pages 及 v1.20.0 全部不變，沒有任何雲端交易同步。
 
 ## Cloudflare Workers 線上部署設定（Issue #59）
