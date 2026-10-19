@@ -1,6 +1,14 @@
 # OrderLead — 台股訂單領先投資管理 PWA
 
-目前版本：**v1.20.0（輸入股票代號，自動填入股票名稱）**
+目前版本：**v1.21.0（雲端帳號：本機金鑰準備畫面，尚未啟用雲端登入及備份）**
+
+## v1.21.0 — 雲端帳號的本機安全準備（Issue #71，#53）
+
+- 設定新增預設收合的「雲端帳號」。畫面明確標示**尚未完成雲端註冊及備份**，不會顯示假的上傳成功或登入狀態。
+- 使用者明確點擊產生設備金鑰後，才會產生 User UUID、Device UUID、P-256 不可匯出的私鑰以及僅於當次畫面顯示的高熵恢復金鑰。請將**帳號 UUID 及恢復金鑰**保存到手機以外。
+- 使用者勾選已完成裝置外備份確認後，才使用獨立 `orderlead-cloud-auth` IndexedDB 保存私鑰、UUID、恢復 verifier；**不保存恢復金鑰明文**。關閉畫面後不能重新查看，不能透過「重設」覆蓋可能已註冊的金鑰。
+- 既有裝置會顯示「本機設備金鑰已保存／待連線註冊」，不會假冒為成功連線 Cloudflare。PWA 不會呼叫認證或交易同步 API。原始九表交易資料庫、現有完整備份與轉移流程維持不變。
+- 0001～0004 migration 已由使用者回報在 Cloudflare D1 Console 執行，但尚須驗證真實 D1 表結構、設定 WAF/edge rate limits、完成真實登入、Session、iPhone Safari/PWA 安全驗收。**兩個認證旗標須保持關閉；仍無任何真實交易雲端備份。**
 
 ## 網站
 
@@ -12,9 +20,9 @@ React + Vite + TypeScript，GitHub Pages 部署；支援安裝 iPhone PWA、手�
 
 - 完整雲端備份預定涵蓋現有 **9 個 IndexedDB stores**（stocks、analyses、trades、quotes、cashflows、alerts、snapshots、imports、reviewTrades），不是只備份交易紀錄。
 - `src/cloud-backup-snapshot.ts` 使用既有 `snapshotLocalData()` 在單一 IndexedDB readonly transaction 取得一致快照，沿用 `validateFullBackup()`、將記錄和物件鍵依固定順序排列，計算整份內容及每張表的 SHA-256 校驗碼和筆數。超過 25 MB、空白、缺表、重複記錄、資料格式錯誤、校驗不符都拒絕。
-- `backend/migrations/0003_first_cloud_backup.sql` 預備 D1 完整快照／各表資料結構，帳號分隔、快照先標記 staging，不得未經服務端校驗即視為 verified；**尚未在你的 Cloudflare 帳號執行這份 SQL**。
+- `backend/migrations/0003_first_cloud_backup.sql` 預備 D1 完整快照／各表資料結構，帳號分隔、快照先標記 staging，不得未經服務端校驗即視為 verified；**使用者已回報於 Cloudflare Console 執行，尚待獨立查驗**。
 - Issue #66 已加入**未接上公開 API**的 `src/cloud-backup-chunks.ts` 與 `backend/src/cloud-backup-d1.ts`：按大小分批、同一備份 ID 可重試、D1 `staging` 保留未完成資料、由伺服器重新讀回九表並重算 SHA-256，完整相符才標記 `verified`，且僅允許完成快照下載還原。不能因上傳部分成功就宣稱備份成功。
-- **目前仍無法真正上傳或還原你的 Cloudflare 資料**：正式 D1 仍未執行 0003；Issue #53 的登入限速、Session、可撤銷身分及公開備份 API 仍未完成。此輪只有未公開的 D1 寫入引擎與測試，尚未從 iPhone 傳輸真實資料。不得只憑 UUID 存取。
+- **目前仍無法真正上傳或還原你的 Cloudflare 資料**：0003/0004 均已由使用者回報執行，但 D1 尚未獨立查驗；Issue #53 的可撤銷 Session、限速程式及預設關閉的認證 API 已實作，仍須完成 edge 保護、正式開通、D1 與 iPhone 安全驗收。此輪尚未從 iPhone 傳輸真實資料。不得只憑 UUID 存取。
 - 目前不在設定頁出現假「備份成功」按鈕，不改本機完整備份與轉移、股票交易／FIFO、PWA、IndexedDB 或 v1.20.0，也沒有把私人紀錄放上 GitHub。
 
 ## 後端 A-2-2：首次裝置身分準備（Issue #53，進行中）
@@ -23,7 +31,7 @@ React + Vite + TypeScript，GitHub Pages 部署；支援安裝 iPhone PWA、手�
 - 目前僅為**可測試的前端安全工具**，沒有匯入 App 畫面、沒有啟用註冊或登入 API，也沒有在手機 IndexedDB 寫入任何新記錄。
 - 第二部分已加入尚未啟用的伺服器端註冊模組（`backend/src/auth-registration.ts`）：產生限時挑戰、驗證新設備簽章，並以 D1 原子交易準備建立帳戶與公鑰。**公開 `/v1/*` 仍全面停用（503）**，不能宣稱已可登入。
 - 第三部分加入**未接通公開路由**的設備登入驗證（`backend/src/auth-device-login.ts`）：使用已授權設備的公鑰驗證 120 秒限時挑戰，檢查撤銷狀態並原子消耗挑戰。同時新增 `backend/src/auth-origin.ts` 嚴格驗證 GitHub Pages Origin；開發用 localhost 僅允許 development。UUID 本身不提供存取權。
-- 第四部分新增**尚未啟用**的 `backend/src/auth-sessions.ts`（15 分鐘短效、設備撤銷立即失效、伺服器只存 Token 雜湊）及 `backend/src/auth-rate-limits.ts`（依 Cloudflare 來源 IP 與使用者做五分鐘計數）；`backend/migrations/0004_auth_sessions_limits.sql` 仍**尚未執行於正式 D1**。
+- 第四部分新增**尚未啟用**的 `backend/src/auth-sessions.ts`（15 分鐘短效、設備撤銷立即失效、伺服器只存 Token 雜湊）及 `backend/src/auth-rate-limits.ts`（依 Cloudflare 來源 IP 與使用者做五分鐘計數）；`backend/migrations/0004_auth_sessions_limits.sql` **使用者已回報於正式 D1 Console 執行，尚待獨立查驗**。
 - 第五部分加入 `backend/src/auth-api.ts`，整合註冊挑戰、設備簽章登入、短效 Session、設備清單與登出路由；**必須同時設定 `AUTH_ROUTES_ENABLED=true` 與 `AUTH_EDGE_PROTECTED=true` 才能啟用**。這兩個設定目前都未配置，因此公開 `/v1/*` 仍然 503，雲端備份仍不開放。
 - 第六部分新增 `src/cloud-device-storage.ts`：使用**獨立**的 `orderlead-cloud-auth` IndexedDB 儲存不可匯出設備私鑰（CryptoKey structured clone），需要事先確認恢復金鑰已另外備份；**不會把恢復金鑰寫入本機資料庫**，不會覆蓋另一台／已註冊帳號，也不改九張交易資料表。此程式目前未接入正式 PWA。
 - 使用者已回報 0004 在 Cloudflare D1 執行成功，但**尚未由程式獨立查驗**。需要先在真實 D1 驗收資料表、開啟 Cloudflare 邊緣保護、完成一次性恢復金鑰 UI 與 iPhone 測試後才可考慮啟用兩個旗標。不要現在開啟。

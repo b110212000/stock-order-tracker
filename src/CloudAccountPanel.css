@@ -1,0 +1,83 @@
+/* Issue #71: local-only cloud identity onboarding, width-safe on iPhone. */
+.cloud-account-panel,.cloud-account-panel *{box-sizing:border-box}
+.cloud-account-panel{
+  width:100%;min-width:0;max-width:100%;
+  padding:12px 15px 16px;border-bottom:1px solid var(--border);
+  display:flex;flex-direction:column;gap:12px;
+  overflow-wrap:anywhere;line-height:1.65;
+  container:cloud-account / inline-size;
+}
+.cloud-account-panel p{margin:0;font-size:12px}
+.cloud-account-caution{
+  padding:10px 12px;border-radius:10px;background:var(--lightblue);
+  color:var(--text);display:flex;align-items:flex-start;gap:9px;
+  border:1px solid var(--border)
+}
+.cloud-account-caution svg{flex-shrink:0;margin-top:2px;color:var(--blue)}
+.cloud-account-muted,.cloud-account-footer{color:var(--sub)}
+.cloud-account-footer{border-top:1px solid var(--border);padding-top:9px}
+.cloud-account-intro,.cloud-account-recovery,.cloud-account-existing{
+  min-width:0;max-width:100%;display:flex;flex-direction:column;gap:11px;
+}
+.cloud-account-heading{display:flex;align-items:center;gap:8px;color:var(--text);font-size:13px}
+.cloud-account-heading svg{color:var(--blue);flex-shrink:0}
+.cloud-account-intro p,.cloud-account-existing p{color:var(--sub)}
+.cloud-account-panel button{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  min-width:0;min-height:44px;max-width:100%;padding:10px 12px;
+  border-radius:11px;font-size:13px;font-weight:700;
+  line-height:1.45;overflow-wrap:anywhere;white-space:normal;
+  cursor:pointer;touch-action:manipulation;
+}
+.cloud-account-panel button:disabled{opacity:.5;cursor:not-allowed}
+.cloud-account-primary{background:var(--blue);color:#fff;border:1px solid var(--blue)}
+.cloud-account-secondary{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.cloud-account-secret{
+  padding:12px;background:var(--bg);border:1px solid var(--border);
+  border-radius:12px;min-width:0;max-width:100%;
+  display:flex;flex-direction:column;gap:7px;
+}
+.cloud-account-secret label,.cloud-account-meta dt{font-size:11px;color:var(--sub);font-weight:650}
+.cloud-account-secret output{
+  display:block;min-width:0;max-width:100%;width:100%;
+  padding:10px;border-radius:9px;background:var(--surface);
+  border:1px solid var(--border);color:var(--text);
+  font-size:13px;font-weight:650;line-height:1.6;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,monospace;
+  overflow-wrap:anywhere;word-break:break-all;user-select:text;-webkit-user-select:text
+}
+.cloud-account-key{letter-spacing:.3px}
+.cloud-account-warning{color:#a85f19;font-weight:700}
+.cloud-account-confirm{
+  display:flex;align-items:flex-start;gap:11px;min-width:0;
+  padding:10px;border:1px solid var(--border);
+  border-radius:10px;background:var(--surface);
+  font-size:12px;line-height:1.65;color:var(--text)
+}
+.cloud-account-confirm input{
+  margin:3px 0 0;width:19px;height:19px;flex-shrink:0;accent-color:var(--blue)
+}
+.cloud-account-actions{
+  display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);
+  gap:8px;width:100%;min-width:0
+}
+.cloud-account-meta{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 10px;margin:0}
+.cloud-account-meta dd{min-width:0;margin:0;font-size:12px}
+.cloud-account-id{overflow-wrap:anywhere;word-break:break-all}
+.cloud-account-notice,.cloud-account-error{
+  padding:9px 12px;border-radius:9px;
+  font-size:12px;overflow-wrap:anywhere
+}
+.cloud-account-notice{background:var(--lightblue);color:var(--blue)}
+.cloud-account-error{background:var(--surface);color:#b94444;border:1px solid var(--border)}
+@container cloud-account (max-width:390px){
+  .cloud-account-actions{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:480px){
+  .cloud-account-panel{padding:10px 12px 15px}
+  .cloud-account-actions{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:350px){
+  .cloud-account-panel{padding:9px}
+  .cloud-account-panel button{font-size:12px}
+}
