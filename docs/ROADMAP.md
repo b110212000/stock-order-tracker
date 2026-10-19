@@ -33,10 +33,11 @@
 | v1.18.1 | 交易表單緊湊手機單欄及鍵盤儲存列 RWD（Issue #41）；備份操作與設定頁依可用容器寬度適配（Issue #42） |
 | v1.18.2 | 恢復交易新增／編輯在 375px 以上雙欄，修正 iOS 日期時間欄位在手機過窄時的溢出，保留極窄裝置單欄和鍵盤固定儲存列（Issue #43） |
 | v1.19.0 | iPhone 日期／時間欄位修正、交易方向支援定期定額（FIFO 視買入）、成交時間選填及空白時採 10:45；README 記錄預設規則（Issue #45） |\n| 後續待排 | 輸入股票代號自動帶入名稱，另開 Issue #46，v1.19.0 不實作 |\n| v1.19.1 | 編輯補登缺時間的交易時直接顯示已儲存的 10:45，保留時間來源標記；不覆蓋既有實際成交時間（Issue #45 延續修正） |\n| v1.20.0 | 輸入股票代號自動填入股票名稱，上市／上櫃／ETF；本地離線快照、查不到手填，編輯不覆蓋原名稱（Issue #46） |\n| v1.21.0 | 設定新增雲端帳號**本機**金鑰準備畫面：一次性顯示 UUID/恢復金鑰、裝置外保存確認、獨立 IndexedDB 不可匯出私鑰，雲端註冊與交易同步依然關閉（Issue #71、#53） |
+| v1.21.1 | 雲端帳號改採 Email＋自訂密碼，收起原本 UUID＋長恢復金鑰的產生入口；只顯示「安全登入建置中」，保留既有本機金鑰，沒有開放登入／備份（Issue #73） |
 | Backend A-1 | Workers + D1 只建立基礎架構、資料表與安全鎖定的健康 API；前端 GitHub Pages / IndexedDB 不動，不啟用同步（Issue #50） |
 | Backend A-1 GitHub 部署設定 | Cloudflare D1 `orderlead-db` 正式綁定 `orderlead-api`、從 `/backend` 線上部署；遠端部署及 SQL migration 仍須使用者驗收（Issue #59） |
 | Backend A-2-1 | User UUID / Device UUID 僅識別，256-bit 恢復金鑰＋設備 P-256 簽章協定、D1 認證表及測試（Issue #52，API 繼續鎖定） |
-| Backend A-2-2 | 首次安全註冊與設備登入（Issue #53）：已完成雙重旗標預設關閉的認證 API、15 分鐘 Session、Origin、防重放、限速及**已接設定頁**的本機私鑰/恢復金鑰準備 UI；0004 使用者回報完成，尚需獨立 D1 表驗證、Cloudflare edge 防護、PWA 真實登入/Session 及 iPhone E2E 驗收 |
+| Backend A-2-2 | **2026-10-19 已更改主要認證架構**：Email＋自訂密碼與 Email 忘記密碼；#73 新增 additive 0005、加鹽及 Cloudflare Secret pepper 的 PBKDF2 核心、Email token、設計與 UI 過渡；0005 尚未套真實 D1、尚無發信/登入/找回 API，edge 保護與 iPhone 測試待做（Issue #53） |
 | Backend A-2-3 | 已授權裝置掃碼授權新設備（Issue #54） |
 | Backend A-2-4 | 恢復金鑰救援、設備撤銷、限速及濫用防護（Issue #55） |
 | Backend A-3.1 | 首次完整雲端備份：9 表一致性快照、排序與 SHA-256、D1 快照結構；尚未上傳真實資料（Issue #64） |

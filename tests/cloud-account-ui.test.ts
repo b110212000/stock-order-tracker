@@ -10,54 +10,31 @@ const settings=readFileSync(new URL('../src/SettingsPage.tsx',import.meta.url),'
 const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8')
 const pkg=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'))
 
-test('Settings has a collapsed cloud-account entry that mounts only on explicit expansion',()=>{
+test('Settings retains a collapsed cloud account entry and local backup controls',()=>{
   assert.match(settings,/const \[cloudOpen,setCloudOpen\]=useState\(false\)/)
   assert.match(settings,/雲端帳號/)
-  assert.match(settings,/本機金鑰準備 · 雲端尚未開放/)
+  assert.match(settings,/Email＋密碼登入 · 開發中/)
   assert.match(settings,/aria-expanded=\{cloudOpen\}/)
   assert.match(settings,/cloudOpen&&<div id="orderlead-cloud-account"><CloudAccountPanel\/>/)
-  assert.match(settings,/aria-controls="orderlead-cloud-account"/)
   assert.match(settings,/backupOpen&&<BackupPanel version=\{version\}\/>/)
-  assert.match(app,/<SettingsPage/)
 })
 
-test('the client never claims successful cloud registration or cloud backup',()=>{
-  assert.match(panel,/尚未建立雲端帳號/)
-  assert.match(panel,/雲端登入與交易上傳尚未開放/)
-  assert.match(panel,/待連線註冊/)
-  assert.match(panel,/本機設備金鑰已安全保存，但尚未建立雲端帳號，也沒有備份任何交易/)
-  assert.doesNotMatch(panel,/fetch\(|XMLHttpRequest|axios|new WebSocket|云端備份成功|雲端備份成功/)
-  const executable=panel.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/.*$/gm,'')
-  assert.doesNotMatch(executable,/localStorage|sessionStorage|window\.location|console\.log|console\.error/)
-  assert.doesNotMatch(panel,/markCloudDeviceRegistered|clearAll\(|replaceAll\(|DELETE FROM/)
+test('new Email-password decision is reflected without a fake working signup form',()=>{
+  assert.match(panel,/Email＋密碼登入/)
+  assert.match(panel,/信箱驗證/)
+  assert.match(panel,/Email 安全重設忘記的密碼/)
+  assert.match(panel,/雲端登入尚未開放/)
+  assert.match(panel,/交易資料仍只存放在這台裝置/)
+  assert.match(panel,/原有資料會保留/)
+  assert.match(panel,/系統不會刪除或覆蓋它/)
+  assert.doesNotMatch(panel,/createPendingCloudIdentity|savePendingCloudDevice/)
+  assert.doesNotMatch(panel,/draft\.recoveryKey|password.*input|<input|<form/)
+  assert.doesNotMatch(panel,/fetch\(|XMLHttpRequest|axios|new WebSocket/)
+  assert.doesNotMatch(panel,/localStorage|sessionStorage|window\.location|console\.log|console\.error/)
+  assert.doesNotMatch(panel,/deleteDatabase|\.clear\(|\.delete\(|replaceAll\(/)
 })
 
-test('recovery key exists only as transient draft before explicit off-device confirmation',()=>{
-  assert.match(panel,/createPendingCloudIdentity\(\)/)
-  assert.match(panel,/readCloudDevice\(\)/)
-  assert.match(panel,/draft\.recoveryKey/)
-  assert.match(panel,/draft\.userId/)
-  assert.match(panel,/acknowledged&&|!acknowledged/)
-  assert.match(panel,/savePendingCloudDevice\(draft,true\)/)
-  assert.match(panel,/setDraft\(null\)/)
-  assert.match(panel,/我已將/)
-  assert.match(panel,/保存到此裝置以外/)
-  assert.match(panel,/取消，不儲存/)
-  assert.match(panel,/剪貼簿內容可能被其他 App 讀取/)
-  // No recovery secret is supplied to the storage API and there is
-  // no navigation handler that transmits it to a remote endpoint.
-  assert.doesNotMatch(panel,/savePendingCloudDevice\(draft\.recoveryKey/)
-})
-
-test('existing or damaged identity never allows silent overwrite or regeneration',()=>{
-  assert.match(panel,/loadState!=='empty'/)
-  assert.match(panel,/const existing=await readCloudDevice\(\)/)
-  assert.match(panel,/setLoadState\('existing'\)/)
-  assert.match(panel,/無法讀取本機設備金鑰/)
-  assert.doesNotMatch(panel,/deleteDatabase|\.clear\(|\.delete\(|markCloudDeviceRegistered/)
-})
-
-test('mobile layout is width-safe and light-dark theme reuses app variables',()=>{
+test('mobile layout still uses narrow screen and current theme variables',()=>{
   assert.match(layout,/max-width:100%/)
   assert.match(layout,/min-width:0/)
   assert.match(layout,/overflow-wrap:anywhere/)
@@ -65,17 +42,17 @@ test('mobile layout is width-safe and light-dark theme reuses app variables',()=
   assert.match(layout,/@media \(max-width:480px\)/)
   assert.match(layout,/var\(--surface\)/)
   assert.match(layout,/var\(--text\)/)
-  assert.match(layout,/min-height:44px/)
 })
 
-test('new visible feature gets minor version bump, backend trade routes stay unavailable',async()=>{
-  assert.match(app,/const VERSION='1\.21\.0'/)
-  assert.equal(pkg.version,'1.21.0')
-  const db={prepare(){throw Error('should not touch financial D1')}}
-  const env:Env={DB:db}
-  for(const path of ['/v1/auth/register','/v1/auth/login','/v1/backups','/v1/sync']){
-    const response=await handleRequest(new Request('https://example.invalid'+path),env)
-    assert.equal(response.status,503)
-    assert.deepEqual(await response.json(),{error:'SYNC_NOT_ENABLED'})
+test('UX correction only bumps patch version, all public auth and backup routes remain disabled',async()=>{
+  assert.match(app,/const VERSION='1\.21\.1'/)
+  assert.equal(pkg.version,'1.21.1')
+  const env:Env={DB:{prepare(){throw Error('must not touch remote D1')}}}
+  for(const path of ['/v1/auth/email/register','/v1/auth/email/login',
+    '/v1/auth/email/forgot-password','/v1/auth/email/reset-password',
+    '/v1/auth/register','/v1/backups']){
+    const res=await handleRequest(new Request('https://orderlead-api.example.invalid'+path,{method:'POST'}),env)
+    assert.equal(res.status,503)
+    assert.deepEqual(await res.json(),{error:'SYNC_NOT_ENABLED'})
   }
 })

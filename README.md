@@ -1,6 +1,15 @@
 # OrderLead — 台股訂單領先投資管理 PWA
 
-目前版本：**v1.21.0（雲端帳號：本機金鑰準備畫面，尚未啟用雲端登入及備份）**
+目前版本：**v1.21.1（雲端帳號改採 Email＋自訂密碼方案；目前仍未啟用雲端登入及備份）**
+
+## v1.21.1 — Email＋密碼帳號安全架構準備（Issue #73／#53）
+
+- 使用者決議將主要登入方式從「User UUID＋隨機恢復金鑰」改為 **Email＋自訂密碼**，並使用 Email 驗證、忘記密碼寄重設連結。新的安全規格見 [backend/EMAIL_PASSWORD_AUTH.md](backend/EMAIL_PASSWORD_AUTH.md)。
+- 新增 `backend/migrations/0005_email_password_auth.sql`（**純新增、尚未套用正式 D1**）：驗證過的 Email／密碼 verifier、待驗證註冊、一次性 Email 重設 token、可撤銷密碼 Session。完全不更新舊版 `account_users`、設備資料或交易資料。
+- 新增未公開的 `backend/src/email-password-primitives.ts`：Cloudflare WebCrypto PBKDF2-HMAC-SHA256 600,000 次、個別隨機 salt、獨立 Worker Secret pepper；高熵重設/Email 驗證 token 僅儲存 SHA-256。**沒有將密碼明文寫入 D1、GitHub 或 localStorage**。
+- 修正設定頁「雲端帳號」顯示：不再讓使用者輸入／管理一長串 UUID 或恢復金鑰，改為說明 Email＋密碼方案開發中，且目前還無法登入或備份。先前 `orderlead-cloud-auth` 已存在的金鑰及原本 `orderlead-local` 九表交易資料庫皆完全保留，不提供危險刪除／重設按鈕。
+- **本期不提供可輸入 Email／密碼的假表單**。寄信網域/供應商、API 註冊與登入、信件驗證、重設密碼 Session 撤銷、Cloudflare edge 防護、真實 D1/iPhone 安全驗收仍須後續獨立完成。雙重認證旗標維持關閉，所有 `/v1/*` API 預設 503，沒有交易上傳雲端。
+
 
 ## v1.21.0 — 雲端帳號的本機安全準備（Issue #71，#53）
 
