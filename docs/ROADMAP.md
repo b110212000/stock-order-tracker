@@ -35,7 +35,7 @@
 | v1.19.0 | iPhone 日期／時間欄位修正、交易方向支援定期定額（FIFO 視買入）、成交時間選填及空白時採 10:45；README 記錄預設規則（Issue #45） |\n| 後續待排 | 輸入股票代號自動帶入名稱，另開 Issue #46，v1.19.0 不實作 |\n| v1.19.1 | 編輯補登缺時間的交易時直接顯示已儲存的 10:45，保留時間來源標記；不覆蓋既有實際成交時間（Issue #45 延續修正） |\n| v1.20.0 | 輸入股票代號自動填入股票名稱，上市／上櫃／ETF；本地離線快照、查不到手填，編輯不覆蓋原名稱（Issue #46） |\n| Backend A-1 | Workers + D1 只建立基礎架構、資料表與安全鎖定的健康 API；前端 GitHub Pages / IndexedDB 不動，不啟用同步（Issue #50） |
 | Backend A-1 GitHub 部署設定 | Cloudflare D1 `orderlead-db` 正式綁定 `orderlead-api`、從 `/backend` 線上部署；遠端部署及 SQL migration 仍須使用者驗收（Issue #59） |
 | Backend A-2-1 | User UUID / Device UUID 僅識別，256-bit 恢復金鑰＋設備 P-256 簽章協定、D1 認證表及測試（Issue #52，API 繼續鎖定） |
-| Backend A-2-2 | 首次安全註冊與設備登入（Issue #53）：已加入雙重旗標預設關閉的註冊／登入 API、簽章、D1 15 分鐘 Session、Origin、防重放及限速測試；尚須正式 D1 0004、Cloudflare 邊緣保護、金鑰 UI、iPhone E2E 驗收才可開放 |
+| Backend A-2-2 | 首次安全註冊與設備登入（Issue #53）：已加入雙重旗標預設關閉的認證 API、15 分鐘 Session、Origin、防重放、限速與獨立 IndexedDB 不可匯出 CryptoKey 安全儲存（未接 UI）；0004 使用者回報完成，尚需實際資料表驗證、Cloudflare 邊緣保護、一次性恢復金鑰 UI、iPhone E2E 驗收 |
 | Backend A-2-3 | 已授權裝置掃碼授權新設備（Issue #54） |
 | Backend A-2-4 | 恢復金鑰救援、設備撤銷、限速及濫用防護（Issue #55） |
 | Backend A-3.1 | 首次完整雲端備份：9 表一致性快照、排序與 SHA-256、D1 快照結構；尚未上傳真實資料（Issue #64） |
