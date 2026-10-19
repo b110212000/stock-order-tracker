@@ -96,7 +96,8 @@ test('0005 migration is strictly additive and isolates verified/pending identity
   assert.match(statements,/verify_token_sha256 TEXT NOT NULL UNIQUE/)
   assert.match(statements,/FOREIGN KEY\(user_id\) REFERENCES account_users\(id\)/)
   assert.match(statements,/FOREIGN KEY\(user_id\) REFERENCES auth_email_credentials\(user_id\)/)
-  assert.doesNotMatch(statements,/\b(?:DROP|DELETE|UPDATE|REPLACE|ALTER|TRUNCATE)\b/i)
+  // ON DELETE CASCADE is a foreign-key rule, not an actual DELETE query.
+  assert.doesNotMatch(statements,/^\s*(?:DROP|DELETE\s+FROM|UPDATE\s+\w+|REPLACE\s+INTO|ALTER\s+TABLE|TRUNCATE)\b/gmi)
   assert.doesNotMatch(statements,/CREATE TABLE IF NOT EXISTS (?:review_trade_records|cloud_backup_entries|auth_device_sessions)/)
 })
 
