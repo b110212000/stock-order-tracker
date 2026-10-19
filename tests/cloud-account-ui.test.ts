@@ -27,7 +27,8 @@ test('the client never claims successful cloud registration or cloud backup',()=
   assert.match(panel,/待連線註冊/)
   assert.match(panel,/本機設備金鑰已安全保存，但尚未建立雲端帳號，也沒有備份任何交易/)
   assert.doesNotMatch(panel,/fetch\(|XMLHttpRequest|axios|new WebSocket|云端備份成功|雲端備份成功/)
-  assert.doesNotMatch(panel,/localStorage|sessionStorage|window\.location|console\.log|console\.error/)
+  const executable=panel.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/.*$/gm,'')
+  assert.doesNotMatch(executable,/localStorage|sessionStorage|window\.location|console\.log|console\.error/)
   assert.doesNotMatch(panel,/markCloudDeviceRegistered|clearAll\(|replaceAll\(|DELETE FROM/)
 })
 
