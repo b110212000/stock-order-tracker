@@ -108,7 +108,7 @@ test('schema, primitives, and old app do not activate Email endpoints or move fi
   assert.doesNotMatch(router,/from ['"].*email-password-primitives/)
   assert.doesNotMatch(worker,/email-password-primitives|auth_email_credentials/)
   assert.doesNotMatch(config,/PASSWORD_PEPPER|RESEND_API_KEY|AUTH_ROUTES_ENABLED/)
-  assert.match(app,/const VERSION='1\.21\.0'/)
+  assert.match(app,/const VERSION='1\.21\.1'/)
   const env:Env={DB:{prepare(){throw Error('no real DB access')}}}
   for(const path of ['/v1/auth/email/register','/v1/auth/email/login',
     '/v1/auth/email/forgot-password','/v1/auth/email/reset-password',
