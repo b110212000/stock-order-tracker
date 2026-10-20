@@ -23,6 +23,18 @@
 
 # OrderLead — Email + 自訂密碼驗證架構（Issue #53/#73）
 
+## Issue #79：安全閘門後的 Email HTTP API（正式仍未開放）
+
+- 新增 `backend/src/email-auth-api.ts`，定義 POST `/v1/auth/email/register`、`verify`、`login`、`forgot-password`、`reset-password`、`logout` 及 GET `me`。只接受 HTTPS、精確 `Origin: https://b110212000.github.io`、正確方法、單一 JSON 物件及 2KB 本文上限。Token 只能放 POST body 或 `Authorization`，不能放 query string。
+- **三個條件必須同時成立**才會呼叫新版 Email API：Worker 環境 `AUTH_ROUTES_ENABLED==='true'`、`AUTH_EDGE_PROTECTED==='true'`、`EMAIL_AUTH_ENABLED==='true'`。上述旗標**都未配置、不可現在設定**；否則正式 `/v1/*` 仍回 `503 SYNC_NOT_ENABLED`。
+- 已退役的 UUID＋設備登入只能在**另一個** `LEGACY_DEVICE_AUTH_ENABLED==='true'` 加上原本兩個旗標時開啟，避免未來 Email 註冊啟用時一起暴露舊身分路由；本旗標亦未配置。
+- `backend/src/email-auth-rate.ts` 為每一用途建立五分鐘 D1 原子 IP 配額及由 Cloudflare `PASSWORD_PEPPER` HMAC 過的 Email 配額。登入未知帳號會執行慢速 KDF，錯誤採通用文字，另須 Cloudflare WAF/邊緣限速。
+- 對於註冊與忘記密碼，後端先保存 D1 一次性 token，再透過 `ctx.waitUntil()` 把 Email 交給**現有 MLB Worker 的私有 `MLB_MAIL` Service Binding**，回應一律 `202 {status:'check_email_if_eligible'}`，避免等候 SMTP 的時間差透露帳號存在與否。SMTP 發送失敗不建立已驗證帳號、不可對外宣稱實際送達；要等真實 Email 收信驗收。
+- 登入 15 分鐘 Session 只能使用記憶體暫存的 Bearer Token；伺服器每次查 D1 的 owner、token、密碼版本、過期與撤銷。密碼重設後全部舊 Session 因版本升級立即失效。**雲端備份尚無上傳路由**。
+- 現況還沒在真實 D1 套用 `0005`，也沒有完成 edge WAF、真實寄信、Worker PBKDF2 CPU、iPhone Safari 驗證和密碼更改通知，所以**絕對不能開啟任何認證旗標**。這些 PR CI 只提供 mock 測試，不代表正式雲端可用。
+
+
+
 > 決策日期 2026-10-19。**這是新方案的設計和未公開基礎，不代表已可以註冊、登入、寄 Email 或雲端備份。**
 > 使用者不需自行管理 UUID、P-256 私鑰或亂數恢復金鑰。舊版已儲存的本機金鑰不得自動刪除。
 
