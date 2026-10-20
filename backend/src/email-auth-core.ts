@@ -151,8 +151,12 @@ export async function loginEmailPassword(
     // as known addresses. Otherwise short/invalid passwords leak existence.
     try{await createPasswordVerifier(password,pepper)}
     catch(error){
-      if(error instanceof Error&&error.message==='PASSWORD_PEPPER_UNAVAILABLE')
-        throw error
+      if(error instanceof Error&&error.message==='INVALID_PASSWORD')
+        return invalid()
+      // A real runtime KDF failure MUST NOT be swallowed as "wrong login".
+      // The previous catch caused production diagnostics to report 401 when
+      // the 600k WebCrypto request actually failed on Cloudflare Workers.
+      throw error
     }
     return invalid()
   }
