@@ -1,6 +1,11 @@
-name: Live Worker API - Readonly Smoke
+name: Live Worker API - Safe Email Readiness
 on:
   pull_request:
+    paths:
+      - backend/scripts/verify_live_worker.py
+      - .github/workflows/live-worker-smoke.yml
+  push:
+    branches: [main]
     paths:
       - backend/scripts/verify_live_worker.py
       - .github/workflows/live-worker-smoke.yml
@@ -8,10 +13,10 @@ on:
 permissions:
   contents: read
 jobs:
-  read-only-production-probe:
+  safe-email-readiness:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Probe production health and locked auth routes (GET only)
+      - name: Check production Email auth gate (no email, passwords or financial data)
         run: python3 backend/scripts/verify_live_worker.py
