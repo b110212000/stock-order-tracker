@@ -139,8 +139,8 @@ export async function handleEmailAuthRequest(
         const body=fields(await readJson(request),['email','password','confirmPassword'])
         equalPasswords(body)
         await reserveEmailAddressAttempt(env.DB,body.email,'register',pepper,now)
-        if(!tasks?.waitUntil||!env.MLB_MAIL?.sendAuthMail)
-          throw Error('EMAIL_AUTH_UNAVAILABLE')
+        if(!tasks?.waitUntil||typeof env.MLB_MAIL?.sendAuthMail!=='function')
+          throw Error('SIGNUP_MAIL_BINDING_UNAVAILABLE')
         const intent=await prepareEmailSignup(env.DB,body.email,body.password,pepper,now)
         if(intent){
           // Always respond without awaiting SMTP, regardless of whether the
@@ -203,6 +203,16 @@ export async function handleEmailAuthRequest(
     if(reason==='AUTH_RATE_LIMITED')return response(429,{error:'TRY_LATER'},origin)
     if(reason==='AUTH_RATE_UNAVAILABLE'||reason==='EMAIL_AUTH_UNAVAILABLE'||
       reason==='PASSWORD_PEPPER_UNAVAILABLE')return response(503,{error:'AUTH_UNAVAILABLE'},origin)
+    // Stable, non-sensitive categories for debugging signup's HTTP 503.
+    // Never return raw error.message, Email, password, SQL, tokens or stack.
+    const signupErrors:Record<string,string>={
+      SIGNUP_MAIL_BINDING_UNAVAILABLE:'MAIL_BINDING',
+      SIGNUP_HASH_UNAVAILABLE:'PASSWORD_HASH',
+      SIGNUP_LOOKUP_UNAVAILABLE:'ACCOUNT_LOOKUP',
+      SIGNUP_WRITE_UNAVAILABLE:'SIGNUP_STORAGE'
+    }
+    if(url.pathname==='/v1/auth/email/register'&&Object.hasOwn(signupErrors,reason))
+      return response(503,{error:'AUTH_UNAVAILABLE',phase:signupErrors[reason]},origin)
     if(reason==='INPUT_TOO_LARGE')return response(413,{error:'INVALID_INPUT'},origin)
     if(reason==='AUTHENTICATION_REQUIRED'||reason==='EMAIL_AUTH_FAILED')
       return response(401,{error:'AUTH_FAILED'},origin)
@@ -210,6 +220,8 @@ export async function handleEmailAuthRequest(
       return response(400,{error:'INVALID_INPUT'},origin)
     // SQL, Worker binding, timeout and other unexpected failures never
     // disclose D1 schema, existing Email, tokens, passwords or stack traces.
+    if(url.pathname==='/v1/auth/email/register')
+      return response(503,{error:'AUTH_UNAVAILABLE',phase:'REGISTRATION_INTERNAL'},origin)
     return response(503,{error:'AUTH_UNAVAILABLE'},origin)
   }
 }
