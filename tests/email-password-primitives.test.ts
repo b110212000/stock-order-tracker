@@ -109,7 +109,7 @@ test('schema, primitives, and old app do not activate Email endpoints or move fi
   assert.doesNotMatch(router,/from ['"].*email-password-primitives/)
   assert.doesNotMatch(worker,/email-password-primitives|auth_email_credentials/)
   const deploy=JSON.parse(config)
-  assert.deepEqual(deploy.secrets,{required:['PASSWORD_PEPPER']})
+  assert.equal(deploy.secrets,undefined)
   assert.deepEqual(deploy.vars,{
     AUTH_ROUTES_ENABLED:'true',AUTH_BASIC_LIMITS_READY:'true',
     EMAIL_AUTH_ENABLED:'true',BACKUP_RECOVERY_ENABLED:'true'
