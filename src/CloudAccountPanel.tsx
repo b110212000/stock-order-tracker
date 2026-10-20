@@ -26,7 +26,12 @@ async function api(path:string,method:'GET'|'POST'='GET',data?:unknown,token?:st
     if(response.status===503)throw Error('Cloudflare 雲端服務尚未開放')
     if(response.status===429)throw Error('請求太頻繁，請稍候再試')
     if(response.status===401)throw Error('密碼錯誤或登入已過期，請重新登入')
-    if(response.status===400)throw Error('輸入或驗證連結無效')
+    if(response.status===400){
+      if(value.error==='INVALID_OR_EXPIRED_LINK')throw Error('驗證或密碼重設連結已失效，請重新申請')
+      if(path.includes('forgot-password'))throw Error('Email 格式不正確，請重新輸入')
+      if(value.error==='INVALID_INPUT')throw Error('Email 或密碼格式不正確（密碼至少 5 字元）')
+      throw Error('輸入資料不正確，請檢查後再試')
+    }
     throw Error('連線失敗：HTTP '+response.status)
   }
   return value
@@ -73,6 +78,11 @@ export default function CloudAccountPanel({version}:{version:string}){
   }
   async function submit(){
     await act(async()=>{
+      if(screen!=='forgot'&&screen!=='verify'){
+        // Browsers use UTF-16 code units for minLength; backend uses Unicode code points.
+        const codePoints=[...password.normalize('NFC')].length
+        if(codePoints<5||codePoints>128)throw Error('密碼長度需為 5～128 個字元')
+      }
       if(screen==='register'){
         if(password!==confirm)throw Error('兩次密碼不一致')
         await api('/v1/auth/email/register','POST',{email,password,confirmPassword:confirm})
@@ -159,11 +169,12 @@ export default function CloudAccountPanel({version}:{version:string}){
           <input type="email" value={email} required maxLength={254} autoComplete="email"
             onChange={e=>setEmail(e.target.value)}/></label>}
         {screen!=='forgot'&&<label>密碼
-          <input type="password" value={password} required minLength={12} maxLength={128}
+          <input type="password" value={password} required minLength={5} maxLength={128}
             autoComplete={screen==='login'?'current-password':'new-password'}
             onChange={e=>setPassword(e.target.value)}/></label>}
+        {(screen==='register'||screen==='reset')&&<small className="cloud-password-hint">密碼至少 5 字元，建議使用更長且不重複的密碼。</small>}
         {(screen==='register'||screen==='reset')&&<label>確認密碼
-          <input type="password" value={confirm} required minLength={12} maxLength={128}
+          <input type="password" value={confirm} required minLength={5} maxLength={128}
             autoComplete="new-password" onChange={e=>setConfirm(e.target.value)}/></label>}
         <button type="submit" className="cloud-account-primary" disabled={busy}>
           {busy?'處理中…':screen==='register'?'寄送驗證信':screen==='forgot'?'寄送重設信':
