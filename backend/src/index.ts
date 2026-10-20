@@ -23,6 +23,8 @@ export interface Env {
   LEGACY_DEVICE_AUTH_ENABLED?:string
   /** Mandatory Cloudflare Secret. Never place its value in source code. */
   PASSWORD_PEPPER?:string
+  /** Per-colo coarse limiter. Mandatory if Email routes are ever enabled. */
+  AUTH_REQUEST_LIMITER?:{limit(input:{key:string}):Promise<{success:boolean}>}
 }
 
 const responseHeaders={
