@@ -1,3 +1,15 @@
+## Issue #75：Email 認證的 D1 核心（尚未公開）
+
+`backend/src/email-auth-core.ts` 現已實作以下**未接公開路由**的流程：
+- `prepareEmailSignup`：先執行 600k 次 PBKDF2、查驗既有 Email，將 salt/verifier 與 30 分鐘一次性 token **雜湊**寫入 `auth_email_signup_pending`；沒有完成 Email token 驗證前不建立可登入的正式帳號。
+- `confirmEmailSignup`：在 D1 `batch()` 事務內消耗 token，條件式新增 `account_users`、`auth_email_credentials`；SQL 內防重複 Email，回傳只含伺服器產生的新 userId。
+- `loginEmailPassword`：未知帳號也執行等量 PBKDF2；正確密碼且憑證仍啟用後，D1 寫入短效 hashed bearer Session。不能只憑 Email/UUID 登入。
+- `authenticateEmailSession`、`logoutEmailSession`：每次 JOIN 驗證帳號未停用、token 未撤銷、15 分鐘 TTL 和最新 password_version；登出只撤銷該 Session。
+- `preparePasswordReset`：只對已驗證的 Email 寫入 15 分鐘高熵重設 token 雜湊。
+- `confirmPasswordReset`：在 D1 原子 `batch()` 中耗用 token，更新密碼 KDF、版本號 +1、使其他尚未使用的重設連結失效。所有之前取得的 Session 因密碼版本不符，於下一次受保護操作立即無效。
+
+`tests/email-auth-core.test.ts` 有 fake D1 並行／冪等性／重設／過期／資料隔離模擬，**不代表 Cloudflare 真實 D1 的交易競速已驗收**。未部署 `0005` 時不能呼叫上述操作；新 API、Email WAF、同 IP/Email 限速和寄送通知還在 Issue #75 後續階段。生產環境仍要保持 `/v1/*` 預設 503。
+
 
 ## 已決議：直接共用原本的 MLB Cloudflare Worker 寄信（Issue #76）
 
