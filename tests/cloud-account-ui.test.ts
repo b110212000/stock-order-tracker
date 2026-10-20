@@ -28,7 +28,7 @@ test('Email forms, verified cloud upload and optional restore are wired, never s
   assert.match(panel,/\/v1\/auth\/email\/me/)
   assert.match(panel,/已登入：\{verifiedEmail\}/)
   assert.match(panel,/checkingSession/)
-  assert.match(panel,/本次登入已到期/)
+  assert.match(panel,/長期未使用，請重新登入/)
   assert.match(panel,/forgot-password/)
   assert.match(panel,/reset-password/)
   assert.match(panel,/email-verify/)
