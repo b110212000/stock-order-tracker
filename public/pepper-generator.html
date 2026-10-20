@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>OrderLead｜產生私人金鑰</title>
+  <style>
+    :root {color-scheme:light dark;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif}
+    *{box-sizing:border-box}
+    body{margin:0;padding:24px 16px calc(25px + env(safe-area-inset-bottom));background:light-dark(#f4f6fb,#111827);color:light-dark(#19283c,#f5f8ff)}
+    main{max-width:500px;margin:12px auto;background:light-dark(#fff,#1c2738);padding:24px 20px;border-radius:22px;box-shadow:0 8px 35px #14203914}
+    .eyebrow{font-size:12px;letter-spacing:.06em;color:light-dark(#4d6d9c,#a2bfed);font-weight:750}
+    h1{font-size:23px;margin:12px 0;line-height:1.38}
+    p{font-size:14px;line-height:1.8;color:light-dark(#465468,#c4cede)}
+    .hint{font-size:12px;color:light-dark(#64748b,#c4cede)}
+    .key-label{display:block;font-size:13px;font-weight:700;margin:22px 0 9px}
+    input{width:100%;min-width:0;min-height:54px;padding:14px;border-radius:11px;border:1px solid light-dark(#cbd5e1,#4d607e);color:inherit;background:light-dark(#f8fafc,#121c2d);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:.02em}
+    input::placeholder{color:light-dark(#65748a,#a0aabd)}
+    .actions{display:flex;gap:10px;margin-top:12px}
+    button{min-height:46px;border-radius:11px;padding:10px 17px;cursor:pointer;font:inherit;font-size:14px;font-weight:700}
+    .main-button{background:#2563eb;color:white;border:1px solid #2563eb;flex:1}
+    .copy-button{border:1px solid light-dark(#cbd5e1,#52627b);color:inherit;background:transparent;flex:1}
+    button:disabled{opacity:.55;cursor:not-allowed}
+    .status{min-height:28px;margin:12px 0 8px;font-size:13px}
+    ol{padding-left:22px;line-height:1.9;font-size:14px}
+    li{padding-left:3px;margin-bottom:7px}
+    code{padding:2px 5px;border-radius:5px;background:light-dark(#e8efff,#273858);overflow-wrap:anywhere}
+    a{color:light-dark(#1d4ed8,#93c5fd)}
+    .safe{margin-top:18px;padding:12px 14px;background:light-dark(#f0f5ff,#273858);border-radius:12px}
+    .safe p{margin:0}
+    @media(max-width:360px){main{padding:20px 15px}.actions{flex-direction:column}}
+  </style>
+  <script src="./pepper-generator.js" defer></script>
+</head>
+<body>
+<main>
+  <div class="eyebrow">ORDERLEAD · 一次性設定</div>
+  <h1>一鍵產生 Cloudflare 私人金鑰</h1>
+  <p>不用電腦、不用安裝程式。金鑰由這支手機的瀏覽器安全隨機產生，<strong>不會傳送到任何伺服器</strong>，也不會存入網站資料庫。</p>
+  <label class="key-label" for="secret">PASSWORD_PEPPER</label>
+  <input id="secret" type="text" readonly spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="請按「產生金鑰」" aria-describedby="status">
+  <div class="actions">
+    <button id="generate" class="main-button" type="button">產生金鑰</button>
+    <button id="copy" class="copy-button" type="button" disabled>複製</button>
+  </div>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+  <div class="safe"><p>🔒 產生的是 32 bytes 安全隨機值，編碼成 Cloudflare 需要的 43 字元 base64url。<strong>不用輸入你的 Gmail 密碼。</strong></p></div>
+  <h2 style="font-size:17px;margin-top:28px">接下來貼到 Cloudflare</h2>
+  <ol>
+    <li>開啟 <a href="https://dash.cloudflare.com/" target="_blank" rel="noopener noreferrer">Cloudflare Dashboard</a>。</li>
+    <li>進入 <strong>Workers &amp; Pages → orderlead-api → Settings → Variables and Secrets → Add</strong>。</li>
+    <li>Type 選 <strong>Secret</strong>；Variable name 填 <code>PASSWORD_PEPPER</code>。</li>
+    <li>Value 貼上剛複製的金鑰，按 <strong>Deploy</strong>。</li>
+    <li>到 Workers Builds 對最新的 main 版本選擇 <strong>Retry deployment</strong>。</li>
+  </ol>
+  <p class="hint">請不要截圖或分享金鑰。完成後直接關閉本頁；不用傳金鑰給我。這是 OrderLead 登入密碼使用的私密金鑰，與 MLB 共用 Gmail SMTP 是兩件事。</p>
+</main>
+</body>
+</html>
