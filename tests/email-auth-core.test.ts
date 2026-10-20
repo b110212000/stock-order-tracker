@@ -5,7 +5,7 @@ import type {EnrollmentD1,EnrollmentStatement} from '../backend/src/auth-registr
 import {base64UrlEncode} from '../backend/src/auth-primitives'
 import {
   prepareEmailSignup,confirmEmailSignup,loginEmailPassword,
-  authenticateEmailSession,logoutEmailSession,
+  authenticateEmailSession,renewEmailSession,REMEMBER_SESSION_MS,logoutEmailSession,
   preparePasswordReset,confirmPasswordReset
 } from '../backend/src/email-auth-core'
 
@@ -202,7 +202,7 @@ test('duplicate Email registrations do not replace original account passwords or
 test('sessions use random 256-bit token, D1 digest, owner scope, expiration and logout',async()=>{
  const db=new MemoryD1(),{owner}=await signup(db)
  const issued=await loginEmailPassword(db,email,password,pepper,now+200)
- assert.equal(issued.expiresAt,now+200+15*60*1000)
+ assert.equal(issued.expiresAt,now+200+REMEMBER_SESSION_MS)
  assert.equal(db.state.sessions.length,1)
  assert.notEqual(db.state.sessions[0].token_sha256,issued.token)
  assert.match(db.state.sessions[0].token_sha256,/^[0-9a-f]{64}$/)
