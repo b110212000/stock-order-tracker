@@ -1,0 +1,17 @@
+name: Live Worker API - Readonly Smoke
+on:
+  pull_request:
+    paths:
+      - backend/scripts/verify_live_worker.py
+      - .github/workflows/live-worker-smoke.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  read-only-production-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe production health and locked auth routes (GET only)
+        run: python3 backend/scripts/verify_live_worker.py
