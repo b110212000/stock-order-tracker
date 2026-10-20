@@ -10,7 +10,7 @@
 - `AUTH_BASIC_LIMITS_READY = "true"`
 - `EMAIL_AUTH_ENABLED = "true"`
 
-**只有 Email 認證路由**使用這些變數。 `BACKUP_RECOVERY_ENABLED` **仍未設定**，交易雲端備份仍不能公開存取。`AUTH_EDGE_PROTECTED`、`LEGACY_DEVICE_AUTH_ENABLED` 未設定，舊設備登入仍停用。
+Email 路由使用前三項旗標。Issue #99 額外以 GitHub Wrangler 管理 **`BACKUP_RECOVERY_ENABLED=true`**，但雲端備份只接受有效、未撤銷 Email Session，無憑證一律 HTTP 401；使用者不按「立即備份」就不會寫任何交易。`AUTH_EDGE_PROTECTED`、`LEGACY_DEVICE_AUTH_ENABLED` 未設定，舊設備登入仍停用。
 
 既有 D1 每 IP／Email 限速、Worker Rate Limiting Binding、HTTPS/Origin 規則繼續執行。沒有自訂 WAF、付費網域、Turnstile 或新 SMTP Worker。
 
@@ -34,7 +34,7 @@ Cloudflare 管理的 *orderlead-api* Worker → Settings → Variables and Secre
 2. 在 OrderLead PWA 設定 → 雲端帳號輸入自己的 Email、12 字元以上密碼，按寄驗證信。
 3. 查看信箱／垃圾郵件；打開驗證連結後，回到 PWA 登入。
 4. 同一信箱測試忘記密碼，再登入。若有錯誤，先確認 Cloudflare Worker 實際 log／CPU 限制與 `MLB_MAIL` Binding；**不要重設 MLB SMTP 密碼**。
-5. Email 登入驗收完成後，才獨立啟用 `BACKUP_RECOVERY_ENABLED`，先用無敏感資料的測試備份驗證還原；實際交易資料在使用者按「立即備份」前不會上傳。
+5. 備份開關已透過 GitHub 設定為 true，但無 Session 時只能得到 HTTP 401，請先實測本人註冊／收信／登入。之後以非敏感少量測試紀錄按「立即備份」，確認 server-side checksum、另一個瀏覽器登入還原成功後，再備份實際交易資料。真正點選前不會自動上傳。
 
 **GitHub CI / D1 Read-only 驗收 ≠ 真實 Email 已投遞。** 本 Issue 不使用 D1 Read Token 做任何寫入，不需要重新套用 SQL 0005。
 
