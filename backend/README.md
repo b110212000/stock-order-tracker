@@ -85,3 +85,14 @@ The D1 migration includes `account_users`, `registered_devices`, `review_trade_r
 The browser's original URL and IndexedDB remain unchanged, including any installed iPhone PWA. Database binding IDs and login must be configured in your own account; this repository alone cannot create or deploy your Cloudflare resources.
 
 Official references: https://developers.cloudflare.com/workers/local-development/ and https://developers.cloudflare.com/workers/wrangler/commands/d1/
+
+
+## 同一支 MLB Worker 代寄 OrderLead Email（Issue #76）
+
+OrderLead **不另購網域、不另建 SMTP Worker、不複製 Gmail SMTP 帳密**。正式 Gmail 寄件服務仍是原本 Cloudflare `mlb-score-notify` Worker（其 `SMTP_USER` / `SMTP_PASSWORD` 仍只放在 MLB Worker Secrets）。
+
+- `wrangler.jsonc` 宣告 `MLB_MAIL` Service Binding，指向 `mlb-score-notify` 內部 named `OrderLeadMailService`。
+- `src/mlb-mail.ts` 的 `requestAuthEmail(env,kind,email,token,persistedMessageId)` 僅允許已由後端建立的驗證/重設 token：驗證 32 bytes base64url token、Email 格式、重用同一個持久化 Message ID 避免重試時寄多封。連結使用 `https://b110212000.github.io/stock-order-tracker/#/auth/email-verify/<token>` 或 `#/auth/reset-password/<token>`。
+- MLB Worker 內部 RPC 限定的收件地址、用途與連結，使用現有 `FeedbackService` DO 分別儲存 HMAC 摘要與寄送配額。**不新增公開寄信 API**，也不修改 MLB 公開意見回饋。
+- 仍尚未正式接上使用者 Email 註冊、密碼重設路由：OrderLead 的 `/v1/*`、備份和同步全部維持原本雙安全旗標預設關閉。**沒有送出真實驗證信、沒有註冊或備份成功的事實**。
+- 先確認 MLB Workers Builds 有成功發布 named RPC entrypoint，再部署這個 OrderLead binding。兩個 Worker 須在同個 Cloudflare 帳號，不需要在 OrderLead 建立 SMTP Secrets。實際啟用仍需 #75 的 D1 0005、Email 驗證流程、WAF/限速和 iPhone 實測。
