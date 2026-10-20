@@ -134,7 +134,13 @@ export async function loginEmailPassword(
   const email=normalizeEmailAddress(emailInput)
   const row=await lookupEmail(db,email)
   if(!row){
-    await createPasswordVerifier(password,pepper)
+    // Unknown addresses must return the SAME error for malformed passwords
+    // as known addresses. Otherwise short/invalid passwords leak existence.
+    try{await createPasswordVerifier(password,pepper)}
+    catch(error){
+      if(error instanceof Error&&error.message==='PASSWORD_PEPPER_UNAVAILABLE')
+        throw error
+    }
     return invalid()
   }
   const good=await verifyPassword(password,pepper,verifierFrom(row))
