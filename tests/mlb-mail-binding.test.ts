@@ -28,8 +28,8 @@ test('trusted backend sends purpose-bounded email through existing MLB worker',a
   }}}
   const verify=randomToken()
   const reset=randomToken()
-  await requestAuthEmail(env,'verify',' User.Name+Alt@Example.Com ',verify)
-  await requestAuthEmail(env,'reset','User.Name+Alt@Example.Com',reset)
+  await requestAuthEmail(env,'verify',' User.Name+Alt@Example.Com ',verify,crypto.randomUUID())
+  await requestAuthEmail(env,'reset','User.Name+Alt@Example.Com',reset,crypto.randomUUID())
   assert.equal(calls.length,2)
   const first=calls[0] as {id:string,kind:string,to:string,link:string}
   const next=calls[1] as typeof first
@@ -55,19 +55,32 @@ test('invalid credentials and missing private binding cannot attempt mail',async
     ['reset','person@example.com','']
   ] as const){
     await assert.rejects(
-      ()=>requestAuthEmail(env,kind as 'verify'|'reset',email,token)
+      ()=>requestAuthEmail(env,kind as 'verify'|'reset',email,token,crypto.randomUUID())
     )
   }
   await assert.rejects(
-    ()=>requestAuthEmail({},'verify','person@example.com',randomToken()),
+    ()=>requestAuthEmail({},'verify','person@example.com',randomToken(),crypto.randomUUID()),
     /MAIL_UNAVAILABLE/)
   assert.equal(called,0)
+})
+
+test('retrying with the same persisted UUID uses the same mail request ID',async()=>{
+  const values:unknown[]=[]
+  const env={MLB_MAIL:{sendAuthMail:async(payload:unknown)=>{
+    values.push(payload)
+    return {accepted:true}
+  }}}
+  const id=crypto.randomUUID(),token=randomToken()
+  await requestAuthEmail(env,'verify','someone@example.com',token,id)
+  await requestAuthEmail(env,'verify','someone@example.com',token,id)
+  assert.equal((values[0] as {id:string}).id,id)
+  assert.deepEqual(values[0],values[1])
 })
 
 test('mail RPC rejection never reports successful Email verification',async()=>{
   const env={MLB_MAIL:{sendAuthMail:async()=>({accepted:false})}}
   await assert.rejects(
-    ()=>requestAuthEmail(env,'verify','person@example.com',randomToken()),
+    ()=>requestAuthEmail(env,'verify','person@example.com',randomToken(),crypto.randomUUID()),
     /MAIL_FAILED/)
 })
 
