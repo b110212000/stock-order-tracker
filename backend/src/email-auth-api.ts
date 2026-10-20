@@ -2,9 +2,10 @@
  * Issue #79 / parent #75: Email auth HTTP adapter.
  *
  * The Worker entrypoint must check three EXPLICIT flags before calling it:
- * AUTH_ROUTES_ENABLED, AUTH_EDGE_PROTECTED, EMAIL_AUTH_ENABLED.
- * Do NOT enable them before Cloudflare edge WAF, migration 0005 and real D1
- * + SMTP + iPhone acceptance. This never exposes financial data.
+ * AUTH_ROUTES_ENABLED, AUTH_BASIC_LIMITS_READY, EMAIL_AUTH_ENABLED.
+ * Personal-use release does not require a custom Zone WAF, but DOES require
+ * Worker limiter, D1 IP/email quotas, migration, SMTP and real login checks.
+ * No financial data is exposed by this adapter.
  */
 import {allowedAuthOrigin,authCorsHeaders} from './auth-origin'
 import type {EnrollmentD1} from './auth-registration'
@@ -125,7 +126,7 @@ export async function handleEmailAuthRequest(
 
   try{
     // Fail closed if the DB, mail transport or server secret isn't ready.
-    // WAF/edge gate is separately enforced by handleRequest().
+    // Explicit opt-in gate is separately enforced by handleRequest().
     if(!env?.DB)throw Error('EMAIL_AUTH_UNAVAILABLE')
     const pepper=validPepper(env)
     // Fast, colo-local limiter is required before D1 and PBKDF2.
