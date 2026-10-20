@@ -172,6 +172,27 @@ export default function CloudAccountPanel({version}:{version:string}){
     }
   },[session])
 
+  // Updating records in another browser tab or importing a local JSON backup
+  // must invalidate the visible status without uploading anything.
+  useEffect(()=>{
+    if(!active(session)||!verifiedEmail||syncState==='syncing')return
+    let cancelled=false
+    const verifyLocal=()=>{
+      if(document.visibilityState==='hidden')return
+      void checkCurrentSync(backups).then(matched=>{
+        if(!cancelled)setSyncState(matched?'synced':'unsynced')
+      }).catch(()=>{if(!cancelled)setSyncState('unsynced')})
+    }
+    window.addEventListener('focus',verifyLocal)
+    document.addEventListener('visibilitychange',verifyLocal)
+    return()=>{
+      cancelled=true
+      window.removeEventListener('focus',verifyLocal)
+      document.removeEventListener('visibilitychange',verifyLocal)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[session,verifiedEmail,backups,syncState,version])
+
   async function submit(){
     await act(async()=>{
       if(screen!=='forgot'&&screen!=='verify'){
@@ -274,7 +295,7 @@ export default function CloudAccountPanel({version}:{version:string}){
   async function logout(){
     const current=session
     forgetCloudSession()
-    setSession(null);setVerifiedEmail('');setBackups([]);setChosen(null)
+    setSession(null);setVerifiedEmail('');setBackups([]);setChosen(null);setSyncState('unsynced')
     if(!active(current))return
     await act(async()=>{await api('/v1/auth/email/logout','POST',undefined,current.token);setStatus('已登出')})
   }
