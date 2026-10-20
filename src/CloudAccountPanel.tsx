@@ -95,9 +95,9 @@ export default function CloudAccountPanel({version}:{version:string}){
     if(!Array.isArray(response.backups))throw Error('雲端備份清單無效')
     setBackups(response.backups as Backup[])
   }
-  // Restore a short-lived session after changing tabs, collapsing Settings
-  // or reloading the same PWA tab. /me always checks revocation and the
-  // current password version; no cached Email is trusted.
+  // Restore a remembered session after switching pages or reopening PWA.
+  // /me checks revocation, expiry and password version asynchronously.
+  // Never trust a cached token alone for showing an authenticated account.
   useEffect(()=>{
     if(init.current?.screen!=='login')return
     const saved=readCloudSession()
@@ -108,10 +108,14 @@ export default function CloudAccountPanel({version}:{version:string}){
         const owner=await api('/v1/auth/email/me','GET',undefined,saved.token)
         if(cancelled)return
         if(typeof owner.email!=='string'||!owner.email.includes('@')||
-          owner.expiresAt!==saved.expiresAt)throw Error('登入狀態無效，請重新登入')
+          typeof owner.expiresAt!=='number'||
+          !validCloudSession({token:saved.token,expiresAt:owner.expiresAt}))
+          throw Error('登入狀態無效，請重新登入')
+        const renewed={token:saved.token,expiresAt:owner.expiresAt}
+        rememberCloudSession(renewed)
         setVerifiedEmail(owner.email)
         setEmail(owner.email)
-        setSession(saved)
+        setSession(renewed)
         try{await refresh(saved.token)}
         catch(error){
           if(!cancelled)setError(error instanceof Error?error.message:'無法載入備份清單')
@@ -137,13 +141,20 @@ export default function CloudAccountPanel({version}:{version:string}){
 
   useEffect(()=>{
     if(!session)return
-    const remaining=Math.max(0,session.expiresAt-Date.now())
-    const timer=window.setTimeout(()=>{
+    const expire=()=>{
+      if(Date.now()+5000<session.expiresAt)return
       forgetCloudSession()
       setSession(null);setVerifiedEmail('');setBackups([]);setChosen(null)
-      setStatus('本次登入已到期，請重新登入')
-    },remaining)
-    return()=>window.clearTimeout(timer)
+      setStatus('長期未使用，請重新登入')
+    }
+    // Browsers cap a single timeout near 24.8 days. Short interval also
+    // handles an iOS PWA waking up after weeks in the background.
+    const timer=window.setInterval(expire,60*1000)
+    document.addEventListener('visibilitychange',expire)
+    return()=>{
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange',expire)
+    }
   },[session])
 
   async function submit(){
@@ -178,8 +189,10 @@ export default function CloudAccountPanel({version}:{version:string}){
         // user-typed address. Do not cache it in browser storage.
         const owner=await api('/v1/auth/email/me','GET',undefined,result.token)
         if(typeof owner.email!=='string'||!owner.email.includes('@')||
-          owner.expiresAt!==result.expiresAt)throw Error('登入帳號資訊不正確')
-        const newSession:Session={token:result.token,expiresAt:result.expiresAt}
+          typeof owner.expiresAt!=='number'||
+          !validCloudSession({token:result.token,expiresAt:owner.expiresAt}))
+          throw Error('登入帳號資訊不正確')
+        const newSession:Session={token:result.token,expiresAt:owner.expiresAt}
         rememberCloudSession(newSession)
         setVerifiedEmail(owner.email)
         setEmail(owner.email)
@@ -272,7 +285,7 @@ export default function CloudAccountPanel({version}:{version:string}){
       </div>}
     </div>:<div className="cloud-account-intro">
       <p className="cloud-account-signed-email"><strong>已登入：{verifiedEmail}</strong></p>
-      <p>本次登入有效至 {new Date(session.expiresAt).toLocaleTimeString('zh-TW')}（15 分鐘到期後需重新登入）</p>
+      <p>已記住登入 · 持續使用會自動續期（30 天未使用才需重新登入）</p>
       <div className="cloud-account-actions">
         <button type="button" className="cloud-account-primary" disabled={busy} onClick={()=>void upload()}>
           <CloudUpload size={16}/>立即備份
