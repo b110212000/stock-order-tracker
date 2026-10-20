@@ -101,3 +101,5 @@
 .cloud-account-panel .backup-preview{display:flex;flex-direction:column;gap:10px;border:1px solid var(--border);padding:12px;border-radius:12px}
 .cloud-account-panel .backup-preview small{color:var(--sub)}
 @media(max-width:390px){.cloud-snapshot>button{width:100%}}
+
+.cloud-password-hint{font-size:12px;line-height:1.5;color:var(--sub);display:block}
