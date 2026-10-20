@@ -53,7 +53,7 @@ test('mobile layout still uses narrow screen and current theme variables',()=>{
 })
 
 test('v1.22.1 adds offline UI while production auth and backup routes stay disabled by default',async()=>{
-  assert.match(app,/const VERSION='1\.22\.0'/)
+  assert.match(app,/const VERSION='1\.22\.1'/)
   assert.equal(pkg.version,'1.22.1')
   const env:Env={DB:{prepare(){throw Error('must not touch remote D1')}}}
   for(const path of ['/v1/auth/email/register','/v1/auth/email/login',
