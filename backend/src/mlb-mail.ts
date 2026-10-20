@@ -7,7 +7,7 @@
  * Never derive an outgoing email from arbitrary client-supplied instructions.
  */
 import {normalizeEmailAddress} from './email-password-primitives'
-import {decode32ByteToken} from './auth-primitives'
+import {decode32ByteToken,isV4Uuid} from './auth-primitives'
 
 export interface MlbMailServiceBinding {
   sendAuthMail(payload:{
@@ -30,18 +30,22 @@ export async function requestAuthEmail(
   env:OrderLeadMailEnv,
   kind:'verify'|'reset',
   recipient:unknown,
-  rawToken:unknown
+  rawToken:unknown,
+  persistedMessageId:unknown
 ):Promise<void>{
   if(kind!=='verify'&&kind!=='reset')throw Error('MAIL_INVALID')
+  if(!isV4Uuid(persistedMessageId))throw Error('MAIL_INVALID')
   if(typeof rawToken!=='string'||!decode32ByteToken(rawToken))throw Error('MAIL_INVALID')
   const email=normalizeEmailAddress(recipient)
   if(!env?.MLB_MAIL?.sendAuthMail)throw Error('MAIL_UNAVAILABLE')
   const route=kind==='verify'?'email-verify':'reset-password'
   const link='https://b110212000.github.io/stock-order-tracker/#/auth/'+route+'/'+rawToken
+  // Callers MUST reuse the same persistedMessageId after a network timeout,
+  // so the mail Worker can deduplicate uncertain deliveries.
   // Send only the purpose, address and previously persisted single-use token.
   // The SMTP caller MUST NOT grant auth or mark D1 token consumed on this RPC.
   const result=await env.MLB_MAIL.sendAuthMail({
-    id:crypto.randomUUID(),kind,to:email,link
+    id:persistedMessageId,kind,to:email,link
   })
   if(result?.accepted!==true)throw Error('MAIL_FAILED')
 }
