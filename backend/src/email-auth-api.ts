@@ -133,10 +133,16 @@ export async function handleEmailAuthRequest(
         const body=fields(await readJson(request),['email','password','confirmPassword'])
         equalPasswords(body)
         await reserveEmailAddressAttempt(env.DB,body.email,'register',pepper,now)
+        if(!tasks?.waitUntil||!env.MLB_MAIL?.sendAuthMail)
+          throw Error('EMAIL_AUTH_UNAVAILABLE')
         const intent=await prepareEmailSignup(env.DB,body.email,body.password,pepper,now)
         if(intent){
-          try{await requestAuthEmail(env,intent.kind,intent.email,intent.token,intent.messageId)}
-          catch{/* Generic response: never disclose registration status by SMTP success */ }
+          // Always respond without awaiting SMTP, regardless of whether the
+          // address is registered. This limits Email-enumeration timing leaks.
+          tasks.waitUntil(
+            requestAuthEmail(env,intent.kind,intent.email,intent.token,intent.messageId)
+              .catch(()=>{/* Never put Email/token or SMTP errors into logs. */})
+          )
         }
         return response(202,{status:'check_email_if_eligible'},origin)
       }
