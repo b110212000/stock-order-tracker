@@ -28,5 +28,15 @@
         "period": 60
       }
     }
-  ]
+  ],
+  "vars": {
+    "AUTH_ROUTES_ENABLED": "true",
+    "AUTH_BASIC_LIMITS_READY": "true",
+    "EMAIL_AUTH_ENABLED": "true"
+  },
+  "secrets": {
+    "required": [
+      "PASSWORD_PEPPER"
+    ]
+  }
 }
