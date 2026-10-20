@@ -32,7 +32,7 @@ test('Cloudflare Workers Builds deploys the backend only with correct D1 binding
     EMAIL_AUTH_ENABLED:'true',
     BACKUP_RECOVERY_ENABLED:'true'
   })
-  assert.deepEqual(config.secrets,{required:['PASSWORD_PEPPER']})
+  assert.equal(config.secrets,undefined)
   assert.equal(config.vars.BACKUP_RECOVERY_ENABLED,'true')
   assert.equal(config.vars.AUTH_EDGE_PROTECTED,undefined)
   assert.equal(config.vars.LEGACY_DEVICE_AUTH_ENABLED,undefined)
@@ -53,7 +53,7 @@ test('the Worker build workflow never migrates production D1 automatically',()=>
   assert.match(guide,/SYNC_NOT_ENABLED/)
   const config=read('wrangler.jsonc')
   const parsed=JSON.parse(config)
-  assert.deepEqual(parsed.secrets,{required:['PASSWORD_PEPPER']})
+  assert.equal(parsed.secrets,undefined)
   assert.doesNotMatch(JSON.stringify({...parsed,vars:undefined,secrets:undefined}),
     /cloudflare_api_token|api[_-]?token|account_id|secret|password|private_key/i)
   assert.equal(parsed.vars.PASSWORD_PEPPER,undefined)
