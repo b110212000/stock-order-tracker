@@ -4,9 +4,12 @@
  *
  * Human-selected passwords MUST NOT use the legacy SHA-256 recoveryVerifier().
  * Use a fresh 128-bit salt, a SECRET 256-bit Cloudflare pepper, and
- * PBKDF2-HMAC-SHA256 with >=600,000 iterations. Argon2id is preferred when
- * an audited, Worker-compatible implementation and CPU budget are available.
- * Benchmark 600k PBKDF2 on real Workers before enabling authentication.
+ * Cloudflare production caps each PBKDF2 invocation at 100,000 rounds.
+ * New verifiers use a seven-stage chained construction (7 x 100k, NOT the
+ * same output as a standard 700k PBKDF2). Existing standard 600k verifiers
+ * remain explicitly distinguished by their recorded passwordIterations.
+ * Argon2id is preferred if an audited Worker-compatible KDF is available.
+ * Benchmark Workers CPU before production signup is considered functional.
  *
  * PASSWORD_PEPPER must be a Cloudflare Worker SECRET, never committed to
  * GitHub, returned to browsers, or included in a log / error / URL.
@@ -14,7 +17,10 @@
 import {base64UrlEncode,bodyDigest,compareVerifier,decode32ByteToken} from './auth-primitives'
 
 export const PASSWORD_KDF='pbkdf2-sha256-pepper-v1' as const
-export const PASSWORD_ITERATIONS=600_000
+/** Composite KDF v2 metadata sentinel: seven sequential 100k PBKDF2 calls. */
+export const PASSWORD_ITERATIONS=700_000
+export const LEGACY_PASSWORD_ITERATIONS=600_000
+const WORKER_PBKDF2_CALL_MAX=100_000
 export const EMAIL_VERIFY_TTL_MS=30*60*1000
 export const EMAIL_RESET_TTL_MS=15*60*1000
 
@@ -84,7 +90,7 @@ function saltBytes(salt:string):Uint8Array{
 function validateVerifier(v:PasswordVerifier):void{
   if(!v||v.passwordAlgorithm!==PASSWORD_KDF||
     !Number.isSafeInteger(v.passwordIterations)||
-    v.passwordIterations<PASSWORD_ITERATIONS||v.passwordIterations>2_000_000||
+    ![LEGACY_PASSWORD_ITERATIONS,PASSWORD_ITERATIONS].includes(v.passwordIterations)||
     typeof v.passwordSalt!=='string'||typeof v.passwordHash!=='string'||
     !base64Digest.test(v.passwordHash)||!decode32ByteToken(v.passwordHash)){
     throw Error('INVALID_PASSWORD_VERIFIER')
@@ -103,12 +109,35 @@ async function derive(password:string,pepper:string,salt:string,iterations:numbe
   const peppered=await crypto.subtle.sign(
     'HMAC',hmac,encoder.encode('orderlead-email-password-v1\n'+password)
   )
-  const key=await crypto.subtle.importKey('raw',peppered,'PBKDF2',false,['deriveBits'])
-  const derived=await crypto.subtle.deriveBits({
-    name:'PBKDF2',hash:'SHA-256',salt:new Uint8Array(saltBytes(salt)).buffer,
-    iterations
-  },key,256)
-  return base64UrlEncode(new Uint8Array(derived))
+  if(iterations===LEGACY_PASSWORD_ITERATIONS){
+    // Preserve original verifier algorithm; NEVER treat stored 600k hashes as
+    // composite hashes. These require an environment allowing a 600k call.
+    const key=await crypto.subtle.importKey('raw',peppered,'PBKDF2',false,['deriveBits'])
+    const derived=await crypto.subtle.deriveBits({
+      name:'PBKDF2',hash:'SHA-256',salt:new Uint8Array(saltBytes(salt)).buffer,
+      iterations
+    },key,256)
+    return base64UrlEncode(new Uint8Array(derived))
+  }
+  if(iterations!==PASSWORD_ITERATIONS)throw Error('INVALID_PASSWORD_VERIFIER')
+  // Seven *serial* 100k WebCrypto invocations. Each stage is salted and
+  // domain-separated; the 32-byte derived output becomes the next key.
+  // This is a composite password KDF, NOT standard PBKDF2(700k).
+  const baseSalt=saltBytes(salt)
+  let intermediate=new Uint8Array(peppered)
+  for(let stage=0;stage<PASSWORD_ITERATIONS/WORKER_PBKDF2_CALL_MAX;stage++){
+    const key=await crypto.subtle.importKey(
+      'raw',new Uint8Array(intermediate).buffer,'PBKDF2',false,['deriveBits'])
+    const stepSalt=new Uint8Array(18)
+    stepSalt.set(baseSalt,0)
+    stepSalt[16]=2 // composite KDF version
+    stepSalt[17]=stage
+    intermediate=new Uint8Array(await crypto.subtle.deriveBits({
+      name:'PBKDF2',hash:'SHA-256',salt:stepSalt.buffer,
+      iterations:WORKER_PBKDF2_CALL_MAX
+    },key,256))
+  }
+  return base64UrlEncode(intermediate)
 }
 function equalDigest(a:string,b:string):boolean{
   if(!base64Digest.test(a)||!base64Digest.test(b))return false
