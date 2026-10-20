@@ -56,13 +56,13 @@ function failEmail():never{throw Error('INVALID_EMAIL')}
 /**
  * Passwords stay opaque: no forced uppercase/symbol rules or trimming.
  * NFC normalization is applied consistently on registration and login.
- * 15-128 Unicode code points; 1KB byte cap to prevent CPU/DoS expansion.
+ * 5-128 Unicode code points (personal use); 1KB byte cap to prevent CPU/DoS expansion.
  */
 export function normalizePassword(input:unknown):string{
   if(typeof input!=='string'||input.includes('\0'))throw Error('INVALID_PASSWORD')
   const password=input.normalize('NFC')
   const codePoints=[...password].length
-  if(codePoints<15||codePoints>128||encoder.encode(password).byteLength>1024||
+  if(codePoints<5||codePoints>128||encoder.encode(password).byteLength>1024||
     /[\u0000-\u001f\u007f]/.test(password))throw Error('INVALID_PASSWORD')
   return password
 }
