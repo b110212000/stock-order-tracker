@@ -50,7 +50,7 @@ export async function handleRequest(
       if(env.AUTH_ROUTES_ENABLED==='true'&&
         env.AUTH_EDGE_PROTECTED==='true'&&
         env.EMAIL_AUTH_ENABLED==='true'){
-        return handleEmailAuthRequest(request,env as unknown as EmailAuthEnvironment)
+        return handleEmailAuthRequest(request,env as unknown as EmailAuthEnvironment,tasks)
       }
       return json(503,{error:'SYNC_NOT_ENABLED'})
     }
