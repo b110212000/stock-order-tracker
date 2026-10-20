@@ -1,3 +1,14 @@
+
+## 已決議：直接共用原本的 MLB Cloudflare Worker 寄信（Issue #76）
+
+原先規劃的「在 OrderLead Worker 重新設定一份 Gmail SMTP Secrets」**不採用**。使用者希望 Gmail 寄信與應用程式密碼只保存在已部署的 **`mlb-score-notify` Worker**。
+
+- MLB Worker 內新增 **named RPC entrypoint `OrderLeadMailService`**，並繼續使用原有 `SMTP_USER`、`SMTP_PASSWORD` 及已存在的 `FeedbackService` Durable Object 配額與去重機制。原本 MLB 意見回饋的公開 HTTP 路由不變，仍只能寄給管理者。
+- OrderLead `backend/wrangler.jsonc` 的 `MLB_MAIL` Service Binding 指向 `mlb-score-notify` 的這個特定 entrypoint。由 OrderLead **可信後端**的 `requestAuthEmail()` 在驗證/重設 token 成功存入 D1 及通過 WAF/IP/Email 配額後才呼叫它。
+- 沒有任何新的公開寄信路由，也沒有在 OrderLead 設定 Gmail Secrets 或公開郵件寄件帳密。Cloudflare 同帳號的 Service Binding 是私有 Worker-to-Worker 呼叫，**不能讓 App/瀏覽器直接呼叫**。
+- 寄信限制：用途只有 `verify` / `reset`，Email 必須單一有效地址，連結固定在 OrderLead PWA 的 HTTPS origin，Token 在 URL fragment，資料僅傳到受控內部 entrypoint。原來 MLB Worker 的限流是寄信層的最後保護，OrderLead 前端／後端仍須實作註冊、重設與身份驗證的獨立反濫用機制。
+- 這是**跨專案程式準備／配置**，不代表有人註冊成功、收到信或雲端備份成功。OrderLead 與 MLB 必須屬於同一 Cloudflare 帳號；在實際啟用時需先確保 MLB Workers Builds 已發布 named entrypoint，並驗證 Service Binding RPC 可以連上，再做真正的信件投遞測試。
+
 # OrderLead — Email + 自訂密碼驗證架構（Issue #53/#73）
 
 > 決策日期 2026-10-19。**這是新方案的設計和未公開基礎，不代表已可以註冊、登入、寄 Email 或雲端備份。**
