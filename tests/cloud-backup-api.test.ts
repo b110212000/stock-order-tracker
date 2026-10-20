@@ -48,6 +48,6 @@ test('untrusted methods cannot create anonymous backups',async()=>{
   assert.match(c,/authenticateEmailSession\(/)
   assert.match(c,/readVerifiedCloudBackup\(/)
   assert.match(c,/completeCloudBackup\(/)
-  assert.match(c,/valid.*BACKUP/vi)
+  assert.match(c,/INVALID_BACKUP/)
   assert.doesNotMatch(c,/console\.log|localStorage|SMTP_PASSWORD|DROP TABLE/)
 })
