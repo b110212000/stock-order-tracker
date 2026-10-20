@@ -36,7 +36,9 @@ function json(status:number,body:Record<string,string>):Response{
   return new Response(JSON.stringify(body),{status,headers:responseHeaders})
 }
 
-export async function handleRequest(request:Request,env:Env):Promise<Response>{
+export async function handleRequest(
+  request:Request,env:Env,tasks?:AuthBackgroundContext
+):Promise<Response>{
   const path=new URL(request.url).pathname
 
   // All synchronization paths are locked before verified account-based
