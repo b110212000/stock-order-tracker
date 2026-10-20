@@ -109,6 +109,14 @@ class MemoryD1 implements EnrollmentD1 {
        expires_at:String(a[2]),revoked_at:null})
      return changes(1)
    }
+   if(sql.startsWith('UPDATE auth_email_sessions SET expires_at')){
+     const t=this.state.sessions.find(x=>x.token_sha256===a[1]&&
+       x.expires_at===a[2]&&!x.revoked_at&&x.expires_at>String(a[3]))
+     const c=this.state.creds.find(x=>x.user_id===a[4]&&!x.disabled_at&&
+       x.password_version===t?.password_version)
+     if(!t||!c)return changes(0)
+     t.expires_at=String(a[0]);return changes(1)
+   }
    if(sql.startsWith('UPDATE auth_email_sessions SET revoked_at')){
      const s=this.state.sessions.find(x=>x.token_sha256===a[1]&&!x.revoked_at)
      if(!s)return changes(0)
