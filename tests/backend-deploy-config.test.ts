@@ -25,8 +25,16 @@ test('Cloudflare Workers Builds deploys the backend only with correct D1 binding
   })
   assert.ok(existsSync(new URL(db.migrations_dir+'/0001_foundation.sql',backend)))
   assert.ok(existsSync(new URL(db.migrations_dir+'/0002_auth_credentials.sql',backend)))
-  assert.equal(config.vars,undefined)
-  assert.equal(config.secrets,undefined)
+  // Public feature flags are safe in Wrangler. Secret values are NOT.
+  assert.deepEqual(config.vars,{
+    AUTH_ROUTES_ENABLED:'true',
+    AUTH_BASIC_LIMITS_READY:'true',
+    EMAIL_AUTH_ENABLED:'true'
+  })
+  assert.deepEqual(config.secrets,{required:['PASSWORD_PEPPER']})
+  assert.equal(config.vars.BACKUP_RECOVERY_ENABLED,undefined)
+  assert.equal(config.vars.AUTH_EDGE_PROTECTED,undefined)
+  assert.equal(config.vars.LEGACY_DEVICE_AUTH_ENABLED,undefined)
   assert.equal(config.account_id,undefined)
 })
 
@@ -43,7 +51,12 @@ test('the Worker build workflow never migrates production D1 automatically',()=>
   assert.match(guide,/does not.*update Wrangler/i)
   assert.match(guide,/SYNC_NOT_ENABLED/)
   const config=read('wrangler.jsonc')
-  assert.doesNotMatch(config,/cloudflare_api_token|api[_-]?token|account_id|secret|password|private_key/i)
+  const parsed=JSON.parse(config)
+  assert.deepEqual(parsed.secrets,{required:['PASSWORD_PEPPER']})
+  assert.doesNotMatch(JSON.stringify({...parsed,vars:undefined,secrets:undefined}),
+    /cloudflare_api_token|api[_-]?token|account_id|secret|password|private_key/i)
+  assert.equal(parsed.vars.PASSWORD_PEPPER,undefined)
+  assert.equal(parsed.vars.SMTP_PASSWORD,undefined)
 })
 
 test('production schema initialization files are additive and have no personal records',()=>{
