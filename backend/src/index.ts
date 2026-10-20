@@ -1,4 +1,6 @@
 import {handleGatedAuthRequest} from './auth-api'
+import {handleEmailAuthRequest} from './email-auth-api'
+import type {EmailAuthEnvironment} from './email-auth-api'
 
 /**
  * OrderLead backend foundation only.
