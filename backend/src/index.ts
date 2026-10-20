@@ -44,8 +44,19 @@ export async function handleRequest(request:Request,env:Env):Promise<Response>{
   if(path==='/v1'||path.startsWith('/v1/')){
     // Two independent opt-in gates. Both are unset by default.
     // Every other /v1 route (especially backups) still returns 503.
+    if(path.startsWith('/v1/auth/email/')){
+      if(env.AUTH_ROUTES_ENABLED==='true'&&
+        env.AUTH_EDGE_PROTECTED==='true'&&
+        env.EMAIL_AUTH_ENABLED==='true'){
+        return handleEmailAuthRequest(request,env as unknown as EmailAuthEnvironment)
+      }
+      return json(503,{error:'SYNC_NOT_ENABLED'})
+    }
+    // Retired UUID+device registration MUST NOT activate accidentally when
+    // the new Email login security gates are eventually configured.
     if(path.startsWith('/v1/auth/')&&
-      env.AUTH_ROUTES_ENABLED==='true'&&env.AUTH_EDGE_PROTECTED==='true'){
+      env.AUTH_ROUTES_ENABLED==='true'&&env.AUTH_EDGE_PROTECTED==='true'&&
+      env.LEGACY_DEVICE_AUTH_ENABLED==='true'){
       return handleGatedAuthRequest(request,env.DB as unknown as Parameters<typeof handleGatedAuthRequest>[1])
     }
     return json(503,{error:'SYNC_NOT_ENABLED'})
