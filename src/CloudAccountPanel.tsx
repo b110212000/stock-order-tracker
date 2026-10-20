@@ -7,6 +7,7 @@ import {restoreLocalData} from './backup-storage'
 import {summarizeBackup,validateFullBackup} from './backup-data'
 import type {OrderLeadBackup,RestoreMode} from './backup-data'
 import './CloudAccountPanel.css'
+import {contentSignature,matchedCloudSync,readSyncMarker,rememberSyncMarker} from './cloud-sync-state'
 import {forgetCloudSession,readCloudSession,rememberCloudSession,validCloudSession} from './cloud-email-session'
 import type {CloudEmailSession} from './cloud-email-session'
 
@@ -71,6 +72,7 @@ export default function CloudAccountPanel({version}:{version:string}){
   const [verifiedEmail,setVerifiedEmail]=useState('')
   const [checkingSession,setCheckingSession]=useState(()=>init.current?.screen==='login'&&readCloudSession()!==null)
   const [backups,setBackups]=useState<Backup[]>([])
+  const [syncState,setSyncState]=useState<'unsynced'|'syncing'|'synced'>('unsynced')
   const [chosen,setChosen]=useState<Entry|null>(null)
   const [mode,setMode]=useState<RestoreMode>('merge')
   const [busy,setBusy]=useState(false),[status,setStatus]=useState(''),[error,setError]=useState('')
@@ -90,10 +92,23 @@ export default function CloudAccountPanel({version}:{version:string}){
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[])
+  async function checkCurrentSync(backupsOnServer:Backup[]):Promise<boolean>{
+    const marker=readSyncMarker()
+    if(!marker||!backupsOnServer.some(item=>item.backupId===marker.backupId))
+      return false
+    try{
+      const current=await prepareLocalCloudBackup(version)
+      return matchedCloudSync(marker,await contentSignature(current.manifest),
+        backupsOnServer.map(item=>item.backupId))
+    }catch{return false}
+  }
   async function refresh(token:string){
     const response=await api('/v1/backups','GET',undefined,token)
     if(!Array.isArray(response.backups))throw Error('雲端備份清單無效')
-    setBackups(response.backups as Backup[])
+    const serverBackups=response.backups as Backup[]
+    setBackups(serverBackups)
+    const current=await checkCurrentSync(serverBackups)
+    setSyncState(current?'synced':'unsynced')
   }
   // Restore a remembered session after switching pages or reopening PWA.
   // /me checks revocation, expiry and password version asynchronously.
@@ -144,7 +159,7 @@ export default function CloudAccountPanel({version}:{version:string}){
     const expire=()=>{
       if(Date.now()+5000<session.expiresAt)return
       forgetCloudSession()
-      setSession(null);setVerifiedEmail('');setBackups([]);setChosen(null)
+      setSession(null);setVerifiedEmail('');setBackups([]);setChosen(null);setSyncState('unsynced')
       setStatus('長期未使用，請重新登入')
     }
     // Browsers cap a single timeout near 24.8 days. Short interval also
@@ -156,6 +171,27 @@ export default function CloudAccountPanel({version}:{version:string}){
       document.removeEventListener('visibilitychange',expire)
     }
   },[session])
+
+  // Updating records in another browser tab or importing a local JSON backup
+  // must invalidate the visible status without uploading anything.
+  useEffect(()=>{
+    if(!active(session)||!verifiedEmail||syncState==='syncing')return
+    let cancelled=false
+    const verifyLocal=()=>{
+      if(document.visibilityState==='hidden')return
+      void checkCurrentSync(backups).then(matched=>{
+        if(!cancelled)setSyncState(matched?'synced':'unsynced')
+      }).catch(()=>{if(!cancelled)setSyncState('unsynced')})
+    }
+    window.addEventListener('focus',verifyLocal)
+    document.addEventListener('visibilitychange',verifyLocal)
+    return()=>{
+      cancelled=true
+      window.removeEventListener('focus',verifyLocal)
+      document.removeEventListener('visibilitychange',verifyLocal)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[session,verifiedEmail,backups,syncState,version])
 
   async function submit(){
     await act(async()=>{
@@ -205,21 +241,30 @@ export default function CloudAccountPanel({version}:{version:string}){
   }
   async function upload(){
     if(!active(session))return setError('請重新登入')
+    if(busy)return
+    setSyncState('syncing')
     await act(async()=>{
-      setStatus('正在準備九張資料表…')
-      const prepared=await prepareLocalCloudBackup(version)
-      const plan=await planFirstCloudUpload(prepared)
-      await api('/v1/backups/start','POST',{backupId:plan.backupId,manifest:prepared.manifest},session.token)
-      for(let i=0;i<plan.chunks.length;i++){
-        if(!active(session))throw Error('登入已過期，請重新登入後再備份')
-        setStatus('正在上傳 '+(i+1)+' / '+plan.chunks.length)
-        await api('/v1/backups/'+plan.backupId+'/chunks','POST',
-          {rows:plan.chunks[i]},session.token)
+      try{
+        const prepared=await prepareLocalCloudBackup(version)
+        const signature=await contentSignature(prepared.manifest)
+        const plan=await planFirstCloudUpload(prepared)
+        await api('/v1/backups/start','POST',{backupId:plan.backupId,manifest:prepared.manifest},session.token)
+        for(const rows of plan.chunks){
+          if(!active(session))throw Error('SESSION_EXPIRED')
+          await api('/v1/backups/'+plan.backupId+'/chunks','POST',{rows},session.token)
+        }
+        const result=await api('/v1/backups/'+plan.backupId+'/complete','POST',{},session.token)
+        if(result.verified!==true)throw Error('BACKUP_UNVERIFIED')
+        // A receipt is never written before the server confirms completion.
+        rememberSyncMarker({backupId:plan.backupId,contentSignature:signature})
+        // Also recheck locally: changes made DURING upload must remain unsynced.
+        await refresh(session.token)
+      }catch(e){
+        setSyncState('unsynced')
+        if(e instanceof Error&&e.message==='空白資料不能標記為首次雲端備份')
+          throw Error('目前沒有需要同步的紀錄')
+        throw Error('同步失敗，請稍後再試')
       }
-      const result=await api('/v1/backups/'+plan.backupId+'/complete','POST',{},session.token)
-      if(result.verified!==true)throw Error('伺服器尚未驗證備份完整性')
-      await refresh(session.token)
-      setStatus('雲端備份完成，已驗證 '+plan.totalRows+' 筆資料')
     })
   }
   async function download(entry:Backup){
@@ -231,7 +276,7 @@ export default function CloudAccountPanel({version}:{version:string}){
         throw Error('雲端備份 SHA-256 驗證失敗，未更動手機資料')
       const backup=validateFullBackup(JSON.parse(result.payload))
       if(summarizeBackup(backup).total!==entry.total)throw Error('雲端備份筆數不一致')
-      setChosen({backup,entry});setMode('merge');setStatus('資料驗證完成，請確認還原方式')
+      setChosen({backup,entry});setMode('merge')
     })
   }
   async function restore(){
@@ -241,20 +286,26 @@ export default function CloudAccountPanel({version}:{version:string}){
       if(window.prompt('輸入「取代」確認覆蓋')!=='取代')return
     }else if(!window.confirm('合併 '+chosen.entry.total+' 筆資料？現有同 ID 紀錄會優先保留。'))return
     await act(async()=>{
-      const result=await restoreLocalData(chosen.backup,mode)
+      await restoreLocalData(chosen.backup,mode)
       setChosen(null)
-      setStatus('還原成功：'+(mode==='merge'?'新增 '+result.added:'目前 '+result.after)+' 筆')
+      setStatus('還原完成')
+      setSyncState(await checkCurrentSync(backups)?'synced':'unsynced')
     })
   }
   async function logout(){
     const current=session
     forgetCloudSession()
-    setSession(null);setVerifiedEmail('');setBackups([]);setChosen(null)
+    setSession(null);setVerifiedEmail('');setBackups([]);setChosen(null);setSyncState('unsynced')
     if(!active(current))return
     await act(async()=>{await api('/v1/auth/email/logout','POST',undefined,current.token);setStatus('已登出')})
   }
   return <section className="cloud-account-panel" aria-label="Email 雲端備份與還原">
-    <div className="cloud-account-heading"><Mail size={17}/><strong>雲端備份與換機還原</strong></div>
+    <div className="cloud-account-heading"><Mail size={17}/><strong>雲端備份與換機還原</strong>
+      {active(session)&&verifiedEmail&&
+        <span className="cloud-sync-status" role="status" aria-live="polite">
+          {syncState==='syncing'?'同步中…':syncState==='synced'?'已同步':'未同步'}
+        </span>}
+    </div>
     {checkingSession?<p role="status">正在確認登入狀態…</p>:
       !active(session)||!verifiedEmail?<div className="cloud-account-intro">
       <p>以 Email 登入後就能備份交易紀錄並在換手機時找回。只有曾經完成雲端備份的資料才能還原。</p>
@@ -288,7 +339,7 @@ export default function CloudAccountPanel({version}:{version:string}){
       <p>已記住登入 · 持續使用會自動續期（30 天未使用才需重新登入）</p>
       <div className="cloud-account-actions">
         <button type="button" className="cloud-account-primary" disabled={busy} onClick={()=>void upload()}>
-          <CloudUpload size={16}/>立即備份
+          <CloudUpload size={16}/>{syncState==='syncing'?'同步中…':'立即同步'}
         </button>
         <button type="button" className="cloud-account-secondary" disabled={busy}
           onClick={()=>void act(()=>refresh(session.token))}>重新整理</button>
@@ -302,7 +353,7 @@ export default function CloudAccountPanel({version}:{version:string}){
           </button>
         </div>)}
       {chosen&&<div className="backup-preview">
-        <strong>已校驗雲端備份 · {chosen.entry.total} 筆</strong>
+        <strong>準備還原 · {chosen.entry.total} 筆</strong>
         <label>還原方式
           <select value={mode} onChange={e=>setMode(e.target.value as RestoreMode)}>
             <option value="merge">合併（保留目前資料）</option>

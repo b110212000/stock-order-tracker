@@ -8,7 +8,7 @@ import { updateSW } from './pwa'
 import { clearOrderLeadPwaCache, freshAppUrl } from './cache-repair'
 import {renewStoredCloudSession} from './cloud-email-session'
 
-const VERSION='1.22.5'
+const VERSION='1.22.6'
 type Tab='trades'|'settings'
 
 /** Stage one: only trade ledger and minimal App settings are exposed. */

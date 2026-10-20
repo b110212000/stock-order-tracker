@@ -42,7 +42,14 @@ test('Email forms, verified cloud upload and optional restore are wired, never s
   assert.doesNotMatch(panel,/Cloudflare 雲端服務尚未開放/)
   assert.doesNotMatch(panel,/輸入或驗證連結無效/)
   assert.doesNotMatch(panel,/minLength=\{12\}/)
-  assert.match(panel,/prepareLocalCloudBackup\(version\)/)
+  assert.ok(panel.includes('prepareLocalCloudBackup(version)'))
+  assert.ok(panel.includes("syncState==='syncing'?'同步中…'"))
+  assert.ok(panel.includes("syncState==='synced'?'已同步':'未同步'"))
+  assert.ok(panel.includes('rememberSyncMarker('))
+  assert.ok(panel.includes('matchedCloudSync('))
+  assert.doesNotMatch(panel,/正在準備九張資料表/)
+  assert.doesNotMatch(panel,/正在上傳 /)
+  assert.doesNotMatch(panel,/雲端備份完成，已驗證 /)
   assert.match(panel,/planFirstCloudUpload\(/)
   assert.match(panel,/verifyCloudBackupSnapshot\(/)
   assert.match(panel,/restoreLocalData\(/)
@@ -63,9 +70,9 @@ test('mobile layout still uses narrow screen and current theme variables',()=>{
   assert.match(layout,/var\(--text\)/)
 })
 
-test('v1.22.5 adds offline UI while production auth and backup routes stay disabled by default',async()=>{
-  assert.match(app,/const VERSION='1\.22\.5'/)
-  assert.equal(pkg.version,'1.22.5')
+test('v1.22.6 adds offline UI while production auth and backup routes stay disabled by default',async()=>{
+  assert.match(app,/const VERSION='1\.22\.6'/)
+  assert.equal(pkg.version,'1.22.6')
   const env:Env={DB:{prepare(){throw Error('must not touch remote D1')}}}
   for(const path of ['/v1/auth/email/register','/v1/auth/email/login',
     '/v1/auth/email/forgot-password','/v1/auth/email/reset-password',
