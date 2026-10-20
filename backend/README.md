@@ -122,3 +122,8 @@ CI 會執行 `python3 backend/scripts/check_email_migration.py`，以本地 SQLi
 `PASSWORD_PEPPER` Cloudflare Secret、實際的網域/WAF 或明確核准的替代防護、
 真實 Gmail 私有 RPC 收件測試與 Worker CPU/iPhone E2E 仍待完成；
 所有 Auth flags 預設仍關閉（/v1/* 繼續 503），沒有財務資料上雲。
+
+
+## Issue #89 — 個人換機找回資料（最新需求）
+
+以 [PERSONAL_RECOVERY_PLAN.md](PERSONAL_RECOVERY_PLAN.md) 為最新規格：不要求自訂網域 WAF／Turnstile，只保留 Email＋密碼、Cloudflare Secret、Workers/D1 基本限速、私有 MLB SMTP；先驗證登入與寄信，再做經 SHA-256 校驗的九表首次雲端備份及非破壞性還原。Email 的第二道旗標改為 `AUTH_BASIC_LIMITS_READY`，舊 `AUTH_EDGE_PROTECTED` 僅保留 legacy device routes。**沒有因本 Issue 自動啟用任何 API 或備份資料**。
