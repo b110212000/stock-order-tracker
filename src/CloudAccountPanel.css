@@ -81,3 +81,23 @@
   .cloud-account-panel{padding:9px}
   .cloud-account-panel button{font-size:12px}
 }
+
+/* Issue #91: compact iPhone-friendly recovery form */
+.cloud-auth-form{display:flex;flex-direction:column;gap:11px;width:100%;min-width:0}
+.cloud-auth-form>strong{font-size:14px}
+.cloud-auth-form label,.backup-preview label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600}
+.cloud-auth-form input,.backup-preview select{
+  width:100%;min-width:0;max-width:100%;min-height:44px;
+  border:1px solid var(--border);border-radius:10px;
+  padding:9px 11px;color:var(--text);background:var(--surface);
+  font:inherit;font-size:16px
+}
+.cloud-auth-switch{display:flex;flex-wrap:wrap;gap:7px}
+.cloud-auth-switch button{background:transparent;border:0;color:var(--blue);font-size:12px;padding:7px;min-height:38px}
+.cloud-snapshot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);font-size:12px}
+.cloud-snapshot>span{flex:1;min-width:160px}
+.cloud-snapshot>button{background:var(--lightblue);color:var(--blue);border:1px solid var(--border)}
+.cloud-account-footer{display:block}
+.cloud-account-panel .backup-preview{display:flex;flex-direction:column;gap:10px;border:1px solid var(--border);padding:12px;border-radius:12px}
+.cloud-account-panel .backup-preview small{color:var(--sub)}
+@media(max-width:390px){.cloud-snapshot>button{width:100%}}
