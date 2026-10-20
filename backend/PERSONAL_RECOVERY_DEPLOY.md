@@ -1,3 +1,5 @@
+> 自動部署相容性（Issue #99）：移除 Wrangler `secrets.required` 的部署前宣告，僅為避免 GitHub → Cloudflare Workers Builds 在已設定 Secret 後仍報部署失敗；**未移除 Cloudflare `PASSWORD_PEPPER` Secret**。登入執行時仍嚴格驗證 Pepper，缺少就回 503，不得使用不安全降級。最新 main 的 Cloudflare Builds 必須確認 Success 才算發版。
+
 # OrderLead v1.22.0 — Personal Email recovery deployment
 
 **Goal:** User can create a verified Email/password account, send and receive confirmation or reset emails using the existing MLB Worker, back up all nine IndexedDB stores to D1, then restore verified backup on another phone. No custom domain or WAF required.
