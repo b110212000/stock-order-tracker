@@ -4,6 +4,13 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-17",
   "workers_dev": true,
+  "services": [
+    {
+      "binding": "MLB_MAIL",
+      "service": "mlb-score-notify",
+      "entrypoint": "OrderLeadMailService"
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
