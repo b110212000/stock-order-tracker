@@ -29,10 +29,11 @@ test('Cloudflare Workers Builds deploys the backend only with correct D1 binding
   assert.deepEqual(config.vars,{
     AUTH_ROUTES_ENABLED:'true',
     AUTH_BASIC_LIMITS_READY:'true',
-    EMAIL_AUTH_ENABLED:'true'
+    EMAIL_AUTH_ENABLED:'true',
+    BACKUP_RECOVERY_ENABLED:'true'
   })
   assert.deepEqual(config.secrets,{required:['PASSWORD_PEPPER']})
-  assert.equal(config.vars.BACKUP_RECOVERY_ENABLED,undefined)
+  assert.equal(config.vars.BACKUP_RECOVERY_ENABLED,'true')
   assert.equal(config.vars.AUTH_EDGE_PROTECTED,undefined)
   assert.equal(config.vars.LEGACY_DEVICE_AUTH_ENABLED,undefined)
   assert.equal(config.account_id,undefined)
