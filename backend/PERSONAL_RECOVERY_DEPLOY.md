@@ -1,3 +1,5 @@
+> 自動部署相容性（Issue #99）：移除 Wrangler `secrets.required` 的部署前宣告，僅為避免 GitHub → Cloudflare Workers Builds 在已設定 Secret 後仍報部署失敗；**未移除 Cloudflare `PASSWORD_PEPPER` Secret**。登入執行時仍嚴格驗證 Pepper，缺少就回 503，不得使用不安全降級。最新 main 的 Cloudflare Builds 必須確認 Success 才算發版。
+
 # OrderLead v1.22.0 — Personal Email recovery deployment
 
 **Goal:** User can create a verified Email/password account, send and receive confirmation or reset emails using the existing MLB Worker, back up all nine IndexedDB stores to D1, then restore verified backup on another phone. No custom domain or WAF required.
@@ -14,9 +16,9 @@
 
 1. Worker: **orderlead-api** → Settings → Variables and Secrets → add **Secret** PASSWORD_PEPPER. Generate locally: `python3 -c 'import secrets; print(secrets.token_urlsafe(32))'`. Exactly 43 base64url characters. Do not paste the value into ChatGPT, GitHub or screenshots.
 2. Verify the latest Worker build from repository main includes Wrangler binding **AUTH_REQUEST_LIMITER** and **MLB_MAIL**. The latter must point to **mlb-score-notify** named **OrderLeadMailService**. MLB Worker must retain its Gmail SMTP_USER and SMTP_PASSWORD secrets. No new public mail endpoint.
-3. Only when secret, bindings and real CPU/D1 testing work, set Workers Environment Variables (Text values) **AUTH_ROUTES_ENABLED=true**, **AUTH_BASIC_LIMITS_READY=true**, **EMAIL_AUTH_ENABLED=true**. Test with ONLY a mailbox you control. They are intentionally absent by default.
+3. Email's 3 Text flags are GitHub-managed and now all set to true via Wrangler; **do not re-enter them manually**. Cloudflare's separate private **PASSWORD_PEPPER** Secret is required and has been installed. Test with only a mailbox you control; account registration and real SMTP delivery are NOT yet confirmed.
 4. Confirm the real verification message arrives, link creates account, login works, forgot-password message arrives, reset revokes previous login and new password works. Confirm real CPU time is within your Workers plan. Gmail acceptance by RPC is not proof of receipt.
-5. For backup testing, after real Email auth and user consent, set **BACKUP_RECOVERY_ENABLED=true** separately. First back up a small safe test dataset on the original phone and confirm the list shows a verified snapshot; download/merge to another test browser and compare counts. Then perform your actual full backup and test recovery again.
+5. Since Issue #99, **BACKUP_RECOVERY_ENABLED=true** is GitHub-managed in Wrangler and activates only when the 3 Email flags remain true. **No login = no backup access**; uploads require a valid signed-in account and explicit button press. After real Email auth, first back up a small safe test dataset on your original phone, verify it appears as a completed snapshot, then download/merge in another test browser and compare counts before your first actual full backup.
 6. Keep **AUTH_EDGE_PROTECTED** and **LEGACY_DEVICE_AUTH_ENABLED** unset; they apply to obsolete device-key routes, not personal Email login. **Do not execute migrations again**: production D1 0005 already has SCHEMA_OK.
 7. If something fails, unset EMAIL_AUTH_ENABLED and BACKUP_RECOVERY_ENABLED immediately. Never drop D1 tables or clear IndexedDB. Re-export local JSON as fallback.
 

@@ -23,7 +23,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 def check(
     path: str,
-    expected_status: int,
+    expected_status: int | tuple[int, ...],
     expected_json: dict[str, str] | None,
     *,
     method: str = "GET",
@@ -53,12 +53,21 @@ def check(
         parsed = json.loads(raw)
     except (UnicodeDecodeError, ValueError):
         parsed = None
-    body_ok = expected_json is None or (
-        isinstance(parsed, dict) and
-        all(parsed.get(key) == value for key, value in expected_json.items())
-    )
-    cors_ok = (cors == ORIGIN if origin else cors is None)
-    passed = status == expected_status and body_ok and cors_ok
+    if isinstance(expected_status, tuple):
+        # During PR the previous Worker may still have disabled backups (503).
+        # Once deployed, owner-scoped API must refuse a missing bearer (401).
+        required_error = {503: "SYNC_NOT_ENABLED", 401: "AUTH_REQUIRED"}
+        body_ok = isinstance(parsed, dict) and parsed.get("error") == required_error.get(status)
+        cors_ok = cors == (ORIGIN if status == 401 else None)
+        status_ok = status in expected_status
+    else:
+        body_ok = expected_json is None or (
+            isinstance(parsed, dict) and
+            all(parsed.get(key) == value for key, value in expected_json.items())
+        )
+        cors_ok = (cors == ORIGIN if origin else cors is None)
+        status_ok = status == expected_status
+    passed = status_ok and body_ok and cors_ok
     print(f"{'PASS' if passed else 'FAIL'} {method} {path}: "
           f"HTTP {status} (expected {expected_status}; "
           f"body_matches={body_ok}; cors_matches={cors_ok})", flush=True)
@@ -76,12 +85,13 @@ if __name__ == "__main__":
         # 401 proves Pepper decoding, Rate Binding and D1 counter succeeded.
         check("/v1/auth/email/me", 401, {"error": "AUTH_FAILED"}, origin=True),
         # Restore and old device flows must stay explicitly disabled.
-        check("/v1/backups", 503, {"error": "SYNC_NOT_ENABLED"}),
+        check("/v1/backups", (503, 401), None, origin=True),
         check("/v1/auth/device/login", 503, {"error": "SYNC_NOT_ENABLED"}),
         check("/v1/backup", 503, {"error": "SYNC_NOT_ENABLED"}),
     ]
     if not all(checks):
         print("FAIL: production Email readiness not proven; do not upload data.", flush=True)
         sys.exit(1)
-    print("PASS: Email Auth router is reachable; Pepper/limiter/D1 counter gate is active.")
+    print("PASS: Email Auth router and no-bearer backup access are protected.")
+    print("LIMIT: 503 indicates pre-deploy backup gate; 401 indicates active protected API.")
     print("LIMIT: no signup, SMTP receipt, password PBKDF2, user data or backups tested.")
