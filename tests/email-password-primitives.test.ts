@@ -108,7 +108,14 @@ test('schema, primitives, and old app do not activate Email endpoints or move fi
   const config=readFileSync(new URL('../backend/wrangler.jsonc',import.meta.url),'utf8')
   assert.doesNotMatch(router,/from ['"].*email-password-primitives/)
   assert.doesNotMatch(worker,/email-password-primitives|auth_email_credentials/)
-  assert.doesNotMatch(config,/PASSWORD_PEPPER|RESEND_API_KEY|AUTH_ROUTES_ENABLED/)
+  const deploy=JSON.parse(config)
+  assert.deepEqual(deploy.secrets,{required:['PASSWORD_PEPPER']})
+  assert.deepEqual(deploy.vars,{
+    AUTH_ROUTES_ENABLED:'true',AUTH_BASIC_LIMITS_READY:'true',EMAIL_AUTH_ENABLED:'true'
+  })
+  assert.equal(deploy.vars.PASSWORD_PEPPER,undefined)
+  assert.equal(deploy.vars.BACKUP_RECOVERY_ENABLED,undefined)
+  assert.doesNotMatch(config,/RESEND_API_KEY|SMTP_PASSWORD|SMTP_USER/)
   assert.match(app,/const VERSION='1\.22\.0'/)
   const env:Env={DB:{prepare(){throw Error('no real DB access')}}}
   for(const path of ['/v1/auth/email/register','/v1/auth/email/login',
