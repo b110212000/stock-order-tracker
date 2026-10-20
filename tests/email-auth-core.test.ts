@@ -59,7 +59,7 @@ class MemoryD1 implements EnrollmentD1 {
      const s=this.state.sessions.find(x=>x.token_sha256===args[0]&&!x.revoked_at&&x.expires_at>String(args[1]))
      const c=this.state.creds.find(x=>x.user_id===s?.user_id&&!x.disabled_at)
      return s&&c&&s.password_version===c.password_version?
-       {...s,active_version:c.password_version}:null
+       {...s,active_version:c.password_version,email_normalized:c.email_normalized}:null
    }
    if(sql.startsWith('SELECT r.user_id,c.password_version FROM auth_email_reset_tokens')){
      const r=this.state.resets.find(x=>x.token_sha256===args[0]&&!x.consumed_at&&x.expires_at>String(args[1]))
@@ -207,7 +207,7 @@ test('sessions use random 256-bit token, D1 digest, owner scope, expiration and 
  assert.notEqual(db.state.sessions[0].token_sha256,issued.token)
  assert.match(db.state.sessions[0].token_sha256,/^[0-9a-f]{64}$/)
  assert.deepEqual(await authenticateEmailSession(db,issued.token,now+300),
-   {userId:owner,expiresAt:issued.expiresAt})
+   {userId:owner,email,expiresAt:issued.expiresAt})
  await assert.rejects(
    ()=>authenticateEmailSession(db,issued.token,issued.expiresAt),
    /AUTHENTICATION_REQUIRED/)

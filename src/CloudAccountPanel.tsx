@@ -7,15 +7,16 @@ import {restoreLocalData} from './backup-storage'
 import {summarizeBackup,validateFullBackup} from './backup-data'
 import type {OrderLeadBackup,RestoreMode} from './backup-data'
 import './CloudAccountPanel.css'
+import {forgetCloudSession,readCloudSession,rememberCloudSession,validCloudSession} from './cloud-email-session'
+import type {CloudEmailSession} from './cloud-email-session'
 
 const HOST='https://orderlead-api.b110212000.workers.dev'
 const tokenOk=/^[-_A-Za-z0-9]{43}$/
-type Session={token:string,expiresAt:number}
+type Session=CloudEmailSession
 type Screen='login'|'register'|'forgot'|'reset'|'verify'
 type Backup={backupId:string,verifiedAt:string,total:number,transactions:number,sha256:string}
 type Entry={backup:OrderLeadBackup,entry:Backup}
-const active=(session:Session|null):session is Session=>!!session&&
-  tokenOk.test(session.token)&&Date.now()+5000<session.expiresAt
+const active=(session:Session|null):session is Session=>validCloudSession(session)
 async function api(path:string,method:'GET'|'POST'='GET',data?:unknown,token?:string):Promise<Record<string,unknown>>{
   const response=await fetch(HOST+path,{method,cache:'no-store',
     headers:{...(data!==undefined?{'Content-Type':'application/json'}:{}),
@@ -41,7 +42,7 @@ async function api(path:string,method:'GET'|'POST'='GET',data?:unknown,token?:st
       throw Error('雲端伺服器暫時無法完成操作（HTTP 503）')
     }
     if(response.status===429)throw Error('請求太頻繁，請稍候再試')
-    if(response.status===401)throw Error('密碼錯誤或登入已過期，請重新登入')
+    if(response.status===401)throw Object.assign(Error('密碼錯誤或登入已過期，請重新登入'),{status:401})
     if(response.status===400){
       if(value.error==='INVALID_OR_EXPIRED_LINK')throw Error('驗證或密碼重設連結已失效，請重新申請')
       if(path.includes('forgot-password'))throw Error('Email 格式不正確，請重新輸入')
@@ -67,6 +68,8 @@ export default function CloudAccountPanel({version}:{version:string}){
   const [email,setEmail]=useState(''),[password,setPassword]=useState('')
   const [confirm,setConfirm]=useState('')
   const [session,setSession]=useState<Session|null>(null)
+  const [verifiedEmail,setVerifiedEmail]=useState('')
+  const [checkingSession,setCheckingSession]=useState(()=>init.current?.screen==='login'&&readCloudSession()!==null)
   const [backups,setBackups]=useState<Backup[]>([])
   const [chosen,setChosen]=useState<Entry|null>(null)
   const [mode,setMode]=useState<RestoreMode>('merge')
@@ -92,6 +95,57 @@ export default function CloudAccountPanel({version}:{version:string}){
     if(!Array.isArray(response.backups))throw Error('雲端備份清單無效')
     setBackups(response.backups as Backup[])
   }
+  // Restore a short-lived session after changing tabs, collapsing Settings
+  // or reloading the same PWA tab. /me always checks revocation and the
+  // current password version; no cached Email is trusted.
+  useEffect(()=>{
+    if(init.current?.screen!=='login')return
+    const saved=readCloudSession()
+    if(!saved){setCheckingSession(false);return}
+    let cancelled=false
+    void (async()=>{
+      try{
+        const owner=await api('/v1/auth/email/me','GET',undefined,saved.token)
+        if(cancelled)return
+        if(typeof owner.email!=='string'||!owner.email.includes('@')||
+          owner.expiresAt!==saved.expiresAt)throw Error('登入狀態無效，請重新登入')
+        setVerifiedEmail(owner.email)
+        setEmail(owner.email)
+        setSession(saved)
+        try{await refresh(saved.token)}
+        catch(error){
+          if(!cancelled)setError(error instanceof Error?error.message:'無法載入備份清單')
+        }
+      }catch(error){
+        if(cancelled)return
+        setSession(null);setVerifiedEmail('')
+        if((error as {status?:number})?.status===401){
+          forgetCloudSession()
+          setStatus('登入已過期，請重新登入')
+        }else{
+          // Retain the token for retry in a brief network outage, but don't
+          // display a logged-in account until the server verifies it.
+          setError('無法確認先前的登入，請檢查網路後重新開啟雲端帳號')
+        }
+      }finally{
+        if(!cancelled)setCheckingSession(false)
+      }
+    })()
+    return()=>{cancelled=true}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[])
+
+  useEffect(()=>{
+    if(!session)return
+    const remaining=Math.max(0,session.expiresAt-Date.now())
+    const timer=window.setTimeout(()=>{
+      forgetCloudSession()
+      setSession(null);setVerifiedEmail('');setBackups([]);setChosen(null)
+      setStatus('本次登入已到期，請重新登入')
+    },remaining)
+    return()=>window.clearTimeout(timer)
+  },[session])
+
   async function submit(){
     await act(async()=>{
       if(screen!=='forgot'&&screen!=='verify'){
@@ -112,6 +166,7 @@ export default function CloudAccountPanel({version}:{version:string}){
         await api('/v1/auth/email/reset-password','POST',{
           token:linkToken,password,confirmPassword:confirm
         })
+        forgetCloudSession();setSession(null);setVerifiedEmail('')
         setLinkToken('');setPassword('');setConfirm('');setScreen('login')
         setStatus('密碼已變更，請重新登入')
       }else{
@@ -119,8 +174,18 @@ export default function CloudAccountPanel({version}:{version:string}){
         if(typeof result.token!=='string'||!tokenOk.test(result.token)||
           typeof result.expiresAt!=='number'||result.expiresAt<Date.now())
           throw Error('登入回應不正確')
-        setSession({token:result.token,expiresAt:result.expiresAt})
-        setPassword('');await refresh(result.token)
+        // The canonical Email comes from the authenticated server, not the
+        // user-typed address. Do not cache it in browser storage.
+        const owner=await api('/v1/auth/email/me','GET',undefined,result.token)
+        if(typeof owner.email!=='string'||!owner.email.includes('@')||
+          owner.expiresAt!==result.expiresAt)throw Error('登入帳號資訊不正確')
+        const newSession:Session={token:result.token,expiresAt:result.expiresAt}
+        rememberCloudSession(newSession)
+        setVerifiedEmail(owner.email)
+        setEmail(owner.email)
+        setSession(newSession)
+        setPassword('')
+        await refresh(result.token)
         setStatus('登入成功')
       }
     })
@@ -170,13 +235,15 @@ export default function CloudAccountPanel({version}:{version:string}){
   }
   async function logout(){
     const current=session
-    setSession(null);setBackups([]);setChosen(null)
+    forgetCloudSession()
+    setSession(null);setVerifiedEmail('');setBackups([]);setChosen(null)
     if(!active(current))return
     await act(async()=>{await api('/v1/auth/email/logout','POST',undefined,current.token);setStatus('已登出')})
   }
   return <section className="cloud-account-panel" aria-label="Email 雲端備份與還原">
     <div className="cloud-account-heading"><Mail size={17}/><strong>雲端備份與換機還原</strong></div>
-    {!active(session)?<div className="cloud-account-intro">
+    {checkingSession?<p role="status">正在確認登入狀態…</p>:
+      !active(session)||!verifiedEmail?<div className="cloud-account-intro">
       <p>以 Email 登入後就能備份交易紀錄並在換手機時找回。只有曾經完成雲端備份的資料才能還原。</p>
       {screen!=='verify'&&<form className="cloud-auth-form" onSubmit={e=>{e.preventDefault();void submit()}}>
         <strong>{screen==='register'?'註冊':screen==='forgot'?'忘記密碼':
@@ -204,7 +271,8 @@ export default function CloudAccountPanel({version}:{version:string}){
           </button>)}
       </div>}
     </div>:<div className="cloud-account-intro">
-      <p>已登入 · 有效至 {new Date(session.expiresAt).toLocaleTimeString('zh-TW')}</p>
+      <p className="cloud-account-signed-email"><strong>已登入：{verifiedEmail}</strong></p>
+      <p>本次登入有效至 {new Date(session.expiresAt).toLocaleTimeString('zh-TW')}（15 分鐘到期後需重新登入）</p>
       <div className="cloud-account-actions">
         <button type="button" className="cloud-account-primary" disabled={busy} onClick={()=>void upload()}>
           <CloudUpload size={16}/>立即備份

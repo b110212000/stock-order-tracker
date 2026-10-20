@@ -29,7 +29,7 @@ type StoredCredential={
 type ResetRow={user_id:string,password_version:number}
 type VerifiedSessionRow={
   user_id:string,password_version:number,active_version:number,
-  created_at:string,expires_at:string
+  email_normalized:string,created_at:string,expires_at:string
 }
 const MINUTES_15=15*60*1000
 const iso=(ms:number)=>new Date(ms).toISOString()
@@ -63,7 +63,7 @@ export type EmailMailIntent=Readonly<{
   messageId:string
 }>
 export type IssuedEmailSession=Readonly<{token:string,expiresAt:number}>
-export type AuthenticatedEmailOwner=Readonly<{userId:string,expiresAt:number}>
+export type AuthenticatedEmailOwner=Readonly<{userId:string,email:string,expiresAt:number}>
 
 /**
  * Pending registration does not reserve the permanent Email account.
@@ -178,14 +178,15 @@ export async function authenticateEmailSession(
 ):Promise<AuthenticatedEmailOwner>{
   if(!validToken(token)||!validClock(now))return authenticated()
   const row=await db.prepare(
-    'SELECT s.user_id,s.password_version,c.password_version AS active_version,s.created_at,s.expires_at FROM auth_email_sessions s INNER JOIN auth_email_credentials c ON c.user_id=s.user_id WHERE s.token_sha256=? AND s.revoked_at IS NULL AND s.expires_at>? AND c.disabled_at IS NULL AND s.password_version=c.password_version LIMIT 1'
+    'SELECT s.user_id,s.password_version,c.password_version AS active_version,c.email_normalized,s.created_at,s.expires_at FROM auth_email_sessions s INNER JOIN auth_email_credentials c ON c.user_id=s.user_id WHERE s.token_sha256=? AND s.revoked_at IS NULL AND s.expires_at>? AND c.disabled_at IS NULL AND s.password_version=c.password_version LIMIT 1'
   ).bind(await sessionHash(token),iso(now)).first<VerifiedSessionRow>()
   if(!row||!isV4Uuid(row.user_id)||row.password_version!==row.active_version||
-    !Number.isSafeInteger(row.active_version))return authenticated()
+    !Number.isSafeInteger(row.active_version)||
+    typeof row.email_normalized!=='string')return authenticated()
   const created=Date.parse(row.created_at),expiresAt=Date.parse(row.expires_at)
   if(!validClock(created)||!validClock(expiresAt)||created>now||
     expiresAt<=now||expiresAt-created!==MINUTES_15)return authenticated()
-  return {userId:row.user_id,expiresAt}
+  return {userId:row.user_id,email:row.email_normalized,expiresAt}
 }
 
 export async function logoutEmailSession(
