@@ -13,6 +13,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate additive Email D1 migration without secrets
         run: python3 backend/scripts/check_email_migration.py
+      - name: Validate D1 readonly API parser with fake data only
+        run: python3 backend/scripts/audit_production_d1.py --self-test
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

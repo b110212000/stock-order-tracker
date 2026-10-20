@@ -1,0 +1,36 @@
+name: Production D1 - Readonly Schema Audit
+
+# Secrets are deliberately NEVER exposed on pull_request.
+# Only audited code merged to main can access the two D1 Read secrets.
+on:
+  push:
+    branches: [main]
+    paths:
+      - backend/scripts/audit_production_d1.py
+      - backend/wrangler.jsonc
+      - .github/workflows/production-d1-read-audit.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-d1-readonly-audit
+  cancel-in-progress: false
+
+jobs:
+  d1-read-audit:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_D1_READ_TOKEN: ${{ secrets.CLOUDFLARE_D1_READ_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check local audit behavior (no Cloudflare request)
+        run: python3 backend/scripts/audit_production_d1.py --self-test
+      - name: Check remote production D1 schema with read-only API
+        run: python3 backend/scripts/audit_production_d1.py
