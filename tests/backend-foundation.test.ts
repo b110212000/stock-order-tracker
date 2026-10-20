@@ -75,7 +75,7 @@ test('real Cloudflare credentials stay private; D1 resource UUID is public confi
   assert.match(config.d1_databases[0].database_id,/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/)
   assert.equal(config.d1_databases[0].binding,'DB')
   assert.equal(config.name,'orderlead-api')
-  assert.deepEqual(config.secrets,{required:['PASSWORD_PEPPER']})
+  assert.equal(config.secrets,undefined)
   assert.deepEqual(config.vars,{
     AUTH_ROUTES_ENABLED:'true',AUTH_BASIC_LIMITS_READY:'true',
     EMAIL_AUTH_ENABLED:'true',BACKUP_RECOVERY_ENABLED:'true'
