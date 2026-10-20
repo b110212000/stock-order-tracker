@@ -32,6 +32,8 @@ type VerifiedSessionRow={
   email_normalized:string,created_at:string,expires_at:string
 }
 const MINUTES_15=15*60*1000
+export const REMEMBER_SESSION_MS=30*24*60*60*1000
+const RENEW_BEFORE_MS=29*24*60*60*1000
 const iso=(ms:number)=>new Date(ms).toISOString()
 const validClock=(now:number)=>Number.isSafeInteger(now)&&now>=0&&now<8_640_000_000_000_000
 const invalid=():never=>{throw Error('EMAIL_AUTH_FAILED')}
@@ -163,7 +165,7 @@ export async function loginEmailPassword(
   const good=await verifyPassword(password,pepper,verifierFrom(row))
   if(!good)return invalid()
   const token=base64UrlEncode(crypto.getRandomValues(new Uint8Array(32)))
-  const stamp=iso(now),expiresAt=now+MINUTES_15
+  const stamp=iso(now),expiresAt=now+REMEMBER_SESSION_MS
   const result=await db.prepare(
     'INSERT INTO auth_email_sessions (token_sha256,user_id,password_version,created_at,expires_at,revoked_at) SELECT ?,user_id,password_version,?,?,NULL FROM auth_email_credentials WHERE user_id=? AND password_version=? AND disabled_at IS NULL'
   ).bind(await sessionHash(token),stamp,iso(expiresAt),
@@ -185,8 +187,29 @@ export async function authenticateEmailSession(
     typeof row.email_normalized!=='string')return authenticated()
   const created=Date.parse(row.created_at),expiresAt=Date.parse(row.expires_at)
   if(!validClock(created)||!validClock(expiresAt)||created>now||
-    expiresAt<=now||expiresAt-created!==MINUTES_15)return authenticated()
+    expiresAt<=now||expiresAt>now+REMEMBER_SESSION_MS||
+    (expiresAt-created!==MINUTES_15&&expiresAt-created<REMEMBER_SESSION_MS))return authenticated()
   return {userId:row.user_id,email:row.email_normalized,expiresAt}
+}
+
+/** Background validation renews a remembered session only about once a day.
+ * The CAS and credential-version predicate prevent renewing a revoked or
+ * password-reset session, including one concurrently invalidated.
+ * Existing 15-minute sessions are upgraded on their next valid /me call.
+ */
+export async function renewEmailSession(
+  db:EnrollmentD1,token:string,now=Date.now()
+):Promise<AuthenticatedEmailOwner>{
+  const owner=await authenticateEmailSession(db,token,now)
+  if(owner.expiresAt-now>=RENEW_BEFORE_MS)return owner
+  const next=now+REMEMBER_SESSION_MS
+  if(!validClock(next))return authenticated()
+  const updated=await db.prepare(
+    'UPDATE auth_email_sessions SET expires_at=? WHERE token_sha256=? AND expires_at=? AND revoked_at IS NULL AND expires_at>? AND password_version=(SELECT password_version FROM auth_email_credentials WHERE user_id=? AND disabled_at IS NULL)'
+  ).bind(iso(next),await sessionHash(token),iso(owner.expiresAt),iso(now),owner.userId).run()
+  if(updated.meta.changes===1)return {...owner,expiresAt:next}
+  // A concurrent renewal is harmless; a concurrent logout/reset must fail.
+  return authenticateEmailSession(db,token,now)
 }
 
 export async function logoutEmailSession(

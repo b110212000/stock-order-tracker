@@ -28,7 +28,7 @@ test('Email forms, verified cloud upload and optional restore are wired, never s
   assert.match(panel,/\/v1\/auth\/email\/me/)
   assert.match(panel,/已登入：\{verifiedEmail\}/)
   assert.match(panel,/checkingSession/)
-  assert.match(panel,/本次登入已到期/)
+  assert.match(panel,/長期未使用，請重新登入/)
   assert.match(panel,/forgot-password/)
   assert.match(panel,/reset-password/)
   assert.match(panel,/email-verify/)
@@ -63,9 +63,9 @@ test('mobile layout still uses narrow screen and current theme variables',()=>{
   assert.match(layout,/var\(--text\)/)
 })
 
-test('v1.22.4 adds offline UI while production auth and backup routes stay disabled by default',async()=>{
-  assert.match(app,/const VERSION='1\.22\.4'/)
-  assert.equal(pkg.version,'1.22.4')
+test('v1.22.5 adds offline UI while production auth and backup routes stay disabled by default',async()=>{
+  assert.match(app,/const VERSION='1\.22\.5'/)
+  assert.equal(pkg.version,'1.22.5')
   const env:Env={DB:{prepare(){throw Error('must not touch remote D1')}}}
   for(const path of ['/v1/auth/email/register','/v1/auth/email/login',
     '/v1/auth/email/forgot-password','/v1/auth/email/reset-password',

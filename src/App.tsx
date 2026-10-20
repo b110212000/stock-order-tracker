@@ -6,8 +6,9 @@ import ErrorBoundary from './ErrorBoundary'
 import './ErrorBoundary.css'
 import { updateSW } from './pwa'
 import { clearOrderLeadPwaCache, freshAppUrl } from './cache-repair'
+import {renewStoredCloudSession} from './cloud-email-session'
 
-const VERSION='1.22.4'
+const VERSION='1.22.5'
 type Tab='trades'|'settings'
 
 /** Stage one: only trade ledger and minimal App settings are exposed. */
@@ -19,6 +20,16 @@ export default function App(){
   const [settingsError,setSettingsError]=useState('')
   const [settingsStatus,setSettingsStatus]=useState('')
 
+  useEffect(()=>{
+    // Refresh on reopening the PWA, even while the user is on Records.
+    // Only eligible, near-expiry sessions make a network request.
+    void renewStoredCloudSession()
+    const refreshWhenVisible=()=>{
+      if(document.visibilityState==='visible')void renewStoredCloudSession()
+    }
+    document.addEventListener('visibilitychange',refreshWhenVisible)
+    return()=>document.removeEventListener('visibilitychange',refreshWhenVisible)
+  },[])
   useEffect(()=>{
     const listener=()=>setRefresh(true)
     window.addEventListener('orderlead-update-ready',listener)

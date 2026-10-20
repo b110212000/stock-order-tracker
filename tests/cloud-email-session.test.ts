@@ -6,63 +6,71 @@ import {
 } from '../src/cloud-email-session'
 
 const token='A'.repeat(43)
+const DAY=24*60*60*1000
 
-test('cloud Email session survives component unmount and reloading same tab without storing password or Email',()=>{
-  const original=Object.getOwnPropertyDescriptor(globalThis,'sessionStorage')
-  const values=new Map<string,string>()
-  const fake={getItem:(key:string)=>values.get(key)??null,
-    setItem:(key:string,value:string)=>{values.set(key,value)},
-    removeItem:(key:string)=>{values.delete(key)}}
-  Object.defineProperty(globalThis,'sessionStorage',{configurable:true,value:fake})
+test('remembered cloud login survives full PWA restart, never stores Email/password',()=>{
+  const oldLocal=Object.getOwnPropertyDescriptor(globalThis,'localStorage')
+  const oldSession=Object.getOwnPropertyDescriptor(globalThis,'sessionStorage')
+  const saved=new Map<string,string>(),tabs=new Map<string,string>()
+  const store=(db:Map<string,string>)=>({
+    getItem:(k:string)=>db.get(k)??null,
+    setItem:(k:string,v:string)=>{db.set(k,v)},
+    removeItem:(k:string)=>{db.delete(k)}
+  })
+  Object.defineProperty(globalThis,'localStorage',{configurable:true,value:store(saved)})
+  Object.defineProperty(globalThis,'sessionStorage',{configurable:true,value:store(tabs)})
   try{
     forgetCloudSession()
-    const session={token,expiresAt:Date.now()+14*60*1000}
+    const session={token,expiresAt:Date.now()+29*DAY}
     rememberCloudSession(session)
     assert.deepEqual(readCloudSession(),session)
-    assert.equal(values.has(CLOUD_SESSION_KEY),true)
-    assert.deepEqual(JSON.parse(values.get(CLOUD_SESSION_KEY)!),session)
-    assert.equal(values.get(CLOUD_SESSION_KEY)!.includes('email'),false)
-    assert.equal(values.get(CLOUD_SESSION_KEY)!.includes('password'),false)
-    // After an actual page reload, module memory starts empty. With the
-    // stored token restored, /me must still verify ownership on the server.
+    assert.deepEqual(JSON.parse(saved.get(CLOUD_SESSION_KEY)!),session)
+    assert.equal(saved.get(CLOUD_SESSION_KEY)!.includes('email'),false)
+    assert.equal(saved.get(CLOUD_SESSION_KEY)!.includes('password'),false)
+    // A normal unmount or component recreation does not touch module memory.
+    assert.deepEqual(readCloudSession(),session)
     forgetCloudSession()
-    values.set(CLOUD_SESSION_KEY,JSON.stringify(session))
+    saved.set(CLOUD_SESSION_KEY,JSON.stringify(session))
     assert.deepEqual(readCloudSession(),session)
     forgetCloudSession()
     assert.equal(readCloudSession(),null)
-    assert.equal(values.has(CLOUD_SESSION_KEY),false)
+    assert.equal(saved.has(CLOUD_SESSION_KEY),false)
   }finally{
     forgetCloudSession()
-    if(original)Object.defineProperty(globalThis,'sessionStorage',original)
+    if(oldLocal)Object.defineProperty(globalThis,'localStorage',oldLocal)
+    else Reflect.deleteProperty(globalThis,'localStorage')
+    if(oldSession)Object.defineProperty(globalThis,'sessionStorage',oldSession)
     else Reflect.deleteProperty(globalThis,'sessionStorage')
   }
 })
 
-test('expired, malformed and oversized sessions do not authorize signed-in UI',()=>{
+test('session validation rejects expiration, spoofed emails and excessive expiry',()=>{
   const now=Date.now()
-  assert.equal(validCloudSession({token,expiresAt:now+14*60*1000},now),true)
-  for(const invalid of [
+  assert.equal(validCloudSession({token,expiresAt:now+29*DAY},now),true)
+  for(const value of [
     {token,expiresAt:now-1},{token,expiresAt:now+1000},
-    {token,expiresAt:now+16*60*1000},
-    {token:'bad',expiresAt:now+14*60*1000},
-    {token,expiresAt:now+14*60*1000,email:'spoofed@example.com'},
-    {token,expiresAt:Number.POSITIVE_INFINITY},null
-  ])assert.equal(validCloudSession(invalid,now),false)
+    {token,expiresAt:now+31*DAY},
+    {token:'bad',expiresAt:now+29*DAY},
+    {token,expiresAt:now+29*DAY,email:'spoofed@example.com'},
+    {token,expiresAt:Infinity},null
+  ])assert.equal(validCloudSession(value,now),false)
 })
 
-test('storage-blocked mobile browsers still keep short-lived session in memory for navigation',()=>{
-  const old=Object.getOwnPropertyDescriptor(globalThis,'sessionStorage')
-  Object.defineProperty(globalThis,'sessionStorage',{
-    configurable:true,get(){throw Error('storage disabled')}
-  })
+test('blocked storage continues to support in-memory navigation',()=>{
+  const oldLocal=Object.getOwnPropertyDescriptor(globalThis,'localStorage')
+  const oldSession=Object.getOwnPropertyDescriptor(globalThis,'sessionStorage')
+  for(const k of ['localStorage','sessionStorage'])
+    Object.defineProperty(globalThis,k,{configurable:true,get(){throw Error('blocked')}})
   try{
-    const session={token,expiresAt:Date.now()+14*60*1000}
+    const session={token,expiresAt:Date.now()+29*DAY}
     rememberCloudSession(session)
     assert.deepEqual(readCloudSession(),session)
     forgetCloudSession()
     assert.equal(readCloudSession(),null)
   }finally{
-    if(old)Object.defineProperty(globalThis,'sessionStorage',old)
+    if(oldLocal)Object.defineProperty(globalThis,'localStorage',oldLocal)
+    else Reflect.deleteProperty(globalThis,'localStorage')
+    if(oldSession)Object.defineProperty(globalThis,'sessionStorage',oldSession)
     else Reflect.deleteProperty(globalThis,'sessionStorage')
   }
 })

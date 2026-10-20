@@ -15,7 +15,7 @@ import {reserveAuthWorkerAttempt} from './email-auth-worker-rate'
 import type {AuthWorkerRateEnvironment} from './email-auth-worker-rate'
 import {
   prepareEmailSignup,confirmEmailSignup,loginEmailPassword,
-  authenticateEmailSession,logoutEmailSession,
+  authenticateEmailSession,renewEmailSession,logoutEmailSession,
   preparePasswordReset,confirmPasswordReset
 } from './email-auth-core'
 import {requestAuthEmail} from './mlb-mail'
@@ -192,7 +192,7 @@ export async function handleEmailAuthRequest(
         return response(200,{status:'signed_out'},origin)
       }
       case '/v1/auth/email/me':{
-        const owner=await authenticateEmailSession(env.DB,bearer(request),now)
+        const owner=await renewEmailSession(env.DB,bearer(request),now)
         // Only authenticated Session supplies owner, never a user-submitted UUID.
         return response(200,{userId:owner.userId,email:owner.email,expiresAt:owner.expiresAt},origin)
       }
