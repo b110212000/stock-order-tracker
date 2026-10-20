@@ -1,5 +1,7 @@
 import {handleGatedAuthRequest} from './auth-api'
 import {handleEmailAuthRequest} from './email-auth-api'
+import {handleBackupRequest} from './cloud-backup-api'
+import type {BackupEnvironment} from './cloud-backup-api'
 import type {EmailAuthEnvironment,AuthBackgroundContext} from './email-auth-api'
 
 /**
@@ -23,6 +25,8 @@ export interface Env {
   AUTH_EDGE_PROTECTED?:string
   /** Email path requires three flags; legacy device path remains separate. */
   EMAIL_AUTH_ENABLED?:string
+  /** Separate opt-in: cloud snapshots are never opened by email login alone. */
+  BACKUP_RECOVERY_ENABLED?:string
   LEGACY_DEVICE_AUTH_ENABLED?:string
   /** Mandatory Cloudflare Secret. Never place its value in source code. */
   PASSWORD_PEPPER?:string
@@ -56,6 +60,13 @@ export async function handleRequest(
         env.AUTH_BASIC_LIMITS_READY==='true'&&
         env.EMAIL_AUTH_ENABLED==='true'){
         return handleEmailAuthRequest(request,env as unknown as EmailAuthEnvironment,tasks)
+      }
+      return json(503,{error:'SYNC_NOT_ENABLED'})
+    }
+    if(path==='/v1/backups'||path.startsWith('/v1/backups/')){
+      if(env.AUTH_ROUTES_ENABLED==='true'&&env.AUTH_BASIC_LIMITS_READY==='true'&&
+        env.EMAIL_AUTH_ENABLED==='true'&&env.BACKUP_RECOVERY_ENABLED==='true'){
+        return handleBackupRequest(request,env as unknown as BackupEnvironment)
       }
       return json(503,{error:'SYNC_NOT_ENABLED'})
     }

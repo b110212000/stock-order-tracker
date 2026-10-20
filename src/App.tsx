@@ -7,12 +7,12 @@ import './ErrorBoundary.css'
 import { updateSW } from './pwa'
 import { clearOrderLeadPwaCache, freshAppUrl } from './cache-repair'
 
-const VERSION='1.21.1'
+const VERSION='1.22.0'
 type Tab='trades'|'settings'
 
 /** Stage one: only trade ledger and minimal App settings are exposed. */
 export default function App(){
-  const [tab,setTab]=useState<Tab>('trades')
+  const [tab,setTab]=useState<Tab>(()=>/^#\/auth\/(email-verify|reset-password)\//.test(window.location.hash)?'settings':'trades')
   const [refresh,setRefresh]=useState(false)
   const [repairBusy,setRepairBusy]=useState(false)
   const [checkBusy,setCheckBusy]=useState(false)
