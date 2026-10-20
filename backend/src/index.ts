@@ -32,6 +32,7 @@ export interface Env {
   PASSWORD_PEPPER?:string
   /** Per-colo coarse limiter. Mandatory if Email routes are ever enabled. */
   AUTH_REQUEST_LIMITER?:{limit(input:{key:string}):Promise<{success:boolean}>}
+  MLB_MAIL?:{sendAuthMail:unknown}
 }
 
 const responseHeaders={
@@ -80,6 +81,25 @@ export async function handleRequest(
     return json(503,{error:'SYNC_NOT_ENABLED'})
   }
 
+  // Issue #103: temporary, non-sensitive registration dependency probe.
+  // No user address, token, password, INSERT or SMTP call is used.
+  if(path==='/health/email-readiness'){
+    if(request.method!=='GET')return json(405,{error:'METHOD_NOT_ALLOWED'})
+    if(request.headers.get('Origin')!=='https://b110212000.github.io')
+      return json(403,{error:'ORIGIN_DENIED'})
+    const mail=typeof env.MLB_MAIL?.sendAuthMail==='function'
+    let pendingTable=false
+    try{
+      const row=await env.DB.prepare('SELECT COUNT(*) AS total FROM auth_email_signup_pending')
+        .first<{total:number}>()
+      pendingTable=typeof row?.total==='number'&&row.total>=0
+    }catch{/* diagnostic reports a generic stage, never SQL/data */}
+    return json(mail&&pendingTable?200:503,{
+      status:mail&&pendingTable?'ready':'unavailable',
+      mailBinding:mail?'ready':'missing',
+      pendingTable:pendingTable?'ready':'unavailable'
+    })
+  }
   if(path!=='/health')return json(404,{error:'NOT_FOUND'})
   if(request.method!=='GET')return json(405,{error:'METHOD_NOT_ALLOWED'})
 

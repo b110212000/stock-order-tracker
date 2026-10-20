@@ -1,0 +1,17 @@
+name: Production Email 503 Diagnosis (No Mail)
+on:
+  pull_request:
+    paths:
+      - backend/scripts/probe_live_email_503.py
+      - .github/workflows/probe-live-email-503.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  auth-503-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe live registration/crypto with no real email or account
+        run: python3 backend/scripts/probe_live_email_503.py
