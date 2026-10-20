@@ -96,3 +96,16 @@ OrderLead **不另購網域、不另建 SMTP Worker、不複製 Gmail SMTP 帳�
 - MLB Worker 內部 RPC 限定的收件地址、用途與連結，使用現有 `FeedbackService` DO 分別儲存 HMAC 摘要與寄送配額。**不新增公開寄信 API**，也不修改 MLB 公開意見回饋。
 - 仍尚未正式接上使用者 Email 註冊、密碼重設路由：OrderLead 的 `/v1/*`、備份和同步全部維持原本雙安全旗標預設關閉。**沒有送出真實驗證信、沒有註冊或備份成功的事實**。
 - 先確認 MLB Workers Builds 有成功發布 named RPC entrypoint，再部署這個 OrderLead binding。兩個 Worker 須在同個 Cloudflare 帳號，不需要在 OrderLead 建立 SMTP Secrets。實際啟用仍需 #75 的 D1 0005、Email 驗證流程、WAF/限速和 iPhone 實測。
+
+
+## Issue #75 / #81 — Email D1 0005 上線前驗證（目前尚未套用正式 D1）
+
+最新驗收／操作清單請參考 [EMAIL_0005_ROLLOUT.md](EMAIL_0005_ROLLOUT.md)。
+CI 會執行 `python3 backend/scripts/check_email_migration.py`，以本地 SQLite
+自動驗證完整 0001～0005 schema、舊資料保存、0005 重跑與認證必要約束。
+這**不是正式 Cloudflare D1 已套用成功的證明**。
+
+截至此項工作，PR #78 / #80 已有預設關閉的 Email HTTP API；
+但正式 D1 0005、WAF、PASSWORD_PEPPER、真實 SMTP 和手機端到端驗收仍待完成。
+安全旗標不可提前開啟，所有 /v1/* 仍應回 503，MLB SMTP Service Binding
+維持原本共用架構，App v1.21.1 的 IndexedDB 與舊設備私鑰皆不修改。
