@@ -49,7 +49,9 @@ test('password verifier uses CSPRNG salt, secret pepper and slow PBKDF2, accepts
   assert.notEqual(first.passwordHash,second.passwordHash)
   assert.match(first.passwordSalt,/^[A-Za-z0-9_-]{22}$/)
   assert.match(first.passwordHash,/^[A-Za-z0-9_-]{43}$/)
-  assert.equal(first.passwordIterations,600_000)
+  assert.equal(first.passwordIterations,700_000)
+  // The metadata distinguishes 7x100k composite from old single-call 600k.
+  assert.equal(PASSWORD_ITERATIONS,700_000)
   assert.equal(first.passwordAlgorithm,PASSWORD_KDF)
   assert.equal(JSON.stringify(first).includes(password),false)
   assert.equal(JSON.stringify(first).includes(pepper),false)
@@ -65,6 +67,8 @@ test('reject invalid pepper and verifier metadata (no insecure fallback)',async(
     /PASSWORD_PEPPER_UNAVAILABLE/)
   await assert.rejects(()=>verifyPassword('some long and secure password',pepper,
     {...valid,passwordIterations:1}),/INVALID_PASSWORD_VERIFIER/)
+  await assert.rejects(()=>verifyPassword('some long and secure password',pepper,
+    {...valid,passwordIterations:650_000}),/INVALID_PASSWORD_VERIFIER/)
   await assert.rejects(()=>verifyPassword('some long and secure password',pepper,
     {...valid,passwordSalt:'invalid'}),/INVALID_PASSWORD_VERIFIER/)
   await assert.rejects(()=>verifyPassword('some long and secure password',pepper,
@@ -123,7 +127,7 @@ test('schema, primitives, and old app do not activate Email endpoints or move fi
   assert.equal(deploy.vars.PASSWORD_PEPPER,undefined)
   assert.equal(deploy.vars.BACKUP_RECOVERY_ENABLED,'true')
   assert.doesNotMatch(config,/RESEND_API_KEY|SMTP_PASSWORD|SMTP_USER/)
-  assert.match(app,/const VERSION='1\.22\.2'/)
+  assert.match(app,/const VERSION='1\.22\.3'/)
   const env:Env={DB:{prepare(){throw Error('no real DB access')}}}
   for(const path of ['/v1/auth/email/register','/v1/auth/email/login',
     '/v1/auth/email/forgot-password','/v1/auth/email/reset-password',
