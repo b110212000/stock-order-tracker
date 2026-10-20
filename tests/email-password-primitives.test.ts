@@ -49,7 +49,9 @@ test('password verifier uses CSPRNG salt, secret pepper and slow PBKDF2, accepts
   assert.notEqual(first.passwordHash,second.passwordHash)
   assert.match(first.passwordSalt,/^[A-Za-z0-9_-]{22}$/)
   assert.match(first.passwordHash,/^[A-Za-z0-9_-]{43}$/)
-  assert.equal(first.passwordIterations,600_000)
+  assert.equal(first.passwordIterations,700_000)
+  // The metadata distinguishes 7x100k composite from old single-call 600k.
+  assert.equal(PASSWORD_ITERATIONS,700_000)
   assert.equal(first.passwordAlgorithm,PASSWORD_KDF)
   assert.equal(JSON.stringify(first).includes(password),false)
   assert.equal(JSON.stringify(first).includes(pepper),false)
@@ -65,6 +67,8 @@ test('reject invalid pepper and verifier metadata (no insecure fallback)',async(
     /PASSWORD_PEPPER_UNAVAILABLE/)
   await assert.rejects(()=>verifyPassword('some long and secure password',pepper,
     {...valid,passwordIterations:1}),/INVALID_PASSWORD_VERIFIER/)
+  await assert.rejects(()=>verifyPassword('some long and secure password',pepper,
+    {...valid,passwordIterations:650_000}),/INVALID_PASSWORD_VERIFIER/)
   await assert.rejects(()=>verifyPassword('some long and secure password',pepper,
     {...valid,passwordSalt:'invalid'}),/INVALID_PASSWORD_VERIFIER/)
   await assert.rejects(()=>verifyPassword('some long and secure password',pepper,
