@@ -1,6 +1,6 @@
 /* OrderLead #95: The browser creates the private secret locally.
  * There is no fetch, storage, cookie, analytics or server request.
- * No secret is ever encoded into a URL or printed to a console.
+ * The generated value is never placed in URLs or application logs.
  */
 (() => {
   'use strict'
