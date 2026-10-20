@@ -228,6 +228,36 @@ test('sessions use random 256-bit token, D1 digest, owner scope, expiration and 
    /AUTHENTICATION_REQUIRED/)
 })
 
+
+test('remembered login renews asynchronously and cannot renew after logout',async()=>{
+ const db=new MemoryD1(),{owner}=await signup(db)
+ const issued=await loginEmailPassword(db,email,password,pepper,now+200)
+ const first=await renewEmailSession(db,issued.token,now+400)
+ assert.equal(first.expiresAt,issued.expiresAt)
+ const visit=now+200+24*60*60*1000+1000
+ const extended=await renewEmailSession(db,issued.token,visit)
+ assert.equal(extended.userId,owner)
+ assert.equal(extended.email,email)
+ assert.equal(extended.expiresAt,visit+REMEMBER_SESSION_MS)
+ assert.equal((await authenticateEmailSession(db,issued.token,visit+100)).expiresAt,extended.expiresAt)
+ await logoutEmailSession(db,issued.token,visit+200)
+ await assert.rejects(()=>renewEmailSession(db,issued.token,visit+300),/AUTHENTICATION_REQUIRED/)
+})
+
+test('valid legacy 15-minute session migrates to remembered login at /me',async()=>{
+ const db=new MemoryD1();await signup(db)
+ const issued=await loginEmailPassword(db,email,password,pepper,now+200)
+ db.state.sessions[0].expires_at=new Date(now+200+15*60*1000).toISOString()
+ const newSession=await renewEmailSession(db,issued.token,now+500)
+ assert.equal(newSession.expiresAt,now+500+REMEMBER_SESSION_MS)
+ assert.equal((await authenticateEmailSession(db,issued.token,now+600)).expiresAt,newSession.expiresAt)
+})
+
+test('remembered session expires without use',async()=>{
+ const db=new MemoryD1();await signup(db)
+ const issued=await loginEmailPassword(db,email,password,pepper,now+200)
+ await assert.rejects(()=>renewEmailSession(db,issued.token,issued.expiresAt),/AUTHENTICATION_REQUIRED/)
+})
 test('unknown account and wrong password never issue a session',async()=>{
  const db=new MemoryD1()
  await assert.rejects(
