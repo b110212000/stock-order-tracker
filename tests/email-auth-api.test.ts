@@ -189,14 +189,14 @@ test('D1 request quotas rate-limit IP and separately HMAC-protect per-address bu
 test('malformed login password reveals no difference between existing and unknown Email',async()=>{
   const db=new ApiD1(),e=env(db,enabled)
   const unknown=await handleRequest(req('login','POST',{
-    email:'absent@example.com',password:'short'
+    email:'absent@example.com',password:'tiny'
   }),e)
   db.existing={user_id:crypto.randomUUID(),email_normalized:'present@example.com',
     password_salt:base64UrlEncode(new Uint8Array(16)),password_hash:base64UrlEncode(new Uint8Array(32)),
     password_algorithm:'pbkdf2-sha256-pepper-v1',password_iterations:600000,
     password_version:1,disabled_at:null}
   const known=await handleRequest(req('login','POST',{
-    email:'present@example.com',password:'short'
+    email:'present@example.com',password:'tiny'
   }),e)
   assert.equal(unknown.status,401)
   assert.equal(known.status,401)
@@ -313,4 +313,26 @@ test('personal Email gate still requires a valid Cloudflare pepper and Worker li
     'Access-Control-Request-Method':'POST'
   }),approved)
   assert.equal(preflight.status,204)
+})
+
+test('registration accepts 5-character passwords but rejects 4 before pending signup',async()=>{
+  const db=new ApiD1(),sent:unknown[]=[]
+  const e={...env(db,enabled),MLB_MAIL:{sendAuthMail:async(p:unknown)=>{
+    sent.push(p);return {accepted:true}
+  }}}
+  const tooShort=await handleRequest(req('register','POST',{
+    email:'five-char@example.com',password:'abcd',confirmPassword:'abcd'
+  }),e,background)
+  assert.equal(tooShort.status,400)
+  assert.deepEqual(await tooShort.json(),{error:'INVALID_INPUT'})
+  assert.equal(db.pending.length,0)
+  const valid=await handleRequest(req('register','POST',{
+    email:'five-char@example.com',password:'abcde',confirmPassword:'abcde'
+  }),e,background)
+  assert.equal(valid.status,202)
+  assert.deepEqual(await valid.json(),{status:'check_email_if_eligible'})
+  assert.equal(db.pending.length,1)
+  await Promise.all(pendingJobs.splice(0))
+  assert.equal(sent.length,1)
+  assert.equal(JSON.stringify(db.pending).includes('abcde'),false)
 })
