@@ -26,8 +26,14 @@ test('Email normalization is case-insensitive; plus labels are not merged with o
 
 test('human password minimum and Unicode NFC normalization are validated, never trivially SHA256ed',()=>{
   assert.equal(normalizePassword('correct horse battery staple'),'correct horse battery staple')
+  // 5-character passwords are allowed for personal-use recovery, and the
+  // former 12-to-14 character UI/backend mismatch is fixed.
+  for(const accepted of ['abcde','123456789012','12345678901234','a'.repeat(15),'密碼abc']){
+    assert.equal(normalizePassword(accepted),accepted.normalize('NFC'))
+  }
+  assert.equal([...normalizePassword('😀'.repeat(5))].length,5)
   assert.equal(normalizePassword('é'.repeat(16)),normalizePassword('e\u0301'.repeat(16)))
-  for(const bad of ['',null,123,'12345678901234','a'.repeat(129),
+  for(const bad of ['',null,123,'abcd','😀'.repeat(4),'a'.repeat(129),
     'safe password\nunsafe','password\0'.repeat(4)]){
     assert.throws(()=>normalizePassword(bad),/INVALID_PASSWORD/)
   }
