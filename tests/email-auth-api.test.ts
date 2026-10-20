@@ -60,7 +60,8 @@ function env(db:EnrollmentD1,flags:{auth?:string,edge?:string,email?:string,lega
     AUTH_EDGE_PROTECTED:flags.edge,
     EMAIL_AUTH_ENABLED:flags.email,
     LEGACY_DEVICE_AUTH_ENABLED:flags.legacy,
-    PASSWORD_PEPPER:flags.pepper
+    PASSWORD_PEPPER:flags.pepper,
+    AUTH_REQUEST_LIMITER:{limit:async()=>({success:true})}
   }
 }
 function req(route:string,method='POST',payload?:unknown,headers:Record<string,string>={}):Request{
@@ -230,4 +231,62 @@ test('invalid Email or mismatched confirmation never creates any pending account
     email:'person@example.com',password:'x'.repeat(3000),confirmPassword:'x'.repeat(3000)
   }),e)
   assert.equal(size.status,413)
+})
+
+test('Worker rate binding rejects before any D1 SQL or private mail RPC',async()=>{
+  const db=new ApiD1(),calls:string[]=[]
+  const e={...env(db,enabled),
+    AUTH_REQUEST_LIMITER:{limit:async({key}:{key:string})=>{
+      calls.push(key)
+      return {success:false}
+    }},
+    MLB_MAIL:{sendAuthMail:async()=>{throw Error('should never send')}}
+  }
+  const blocked=await handleRequest(req('login','POST',{
+    email:'sensitive@example.com',password:'A valid long test password!'
+  }),e,background)
+  assert.equal(blocked.status,429)
+  assert.deepEqual(await blocked.json(),{error:'TRY_LATER'})
+  assert.equal(db.statements.length,0)
+  assert.equal(calls.length,1)
+  assert.match(calls[0],/^[a-f0-9]{64}$/)
+  assert.equal(calls[0].includes('sensitive@example.com'),false)
+  assert.equal(calls[0].includes('203.0.113'),false)
+})
+
+test('missing or broken Worker rate binding fails closed before D1',async()=>{
+  const db=new ApiD1()
+  const noRate=env(db,enabled)
+  delete noRate.AUTH_REQUEST_LIMITER
+  const first=await handleRequest(req('login','POST',{
+    email:'person@example.com',password:'Some valid testing password!'
+  }),noRate,background)
+  assert.equal(first.status,503)
+  assert.deepEqual(await first.json(),{error:'AUTH_UNAVAILABLE'})
+  const broken={...env(db,enabled),
+    AUTH_REQUEST_LIMITER:{limit:async()=>{throw Error('connection broken')}}
+  }
+  const second=await handleRequest(req('login','POST',{
+    email:'person@example.com',password:'Some valid testing password!'
+  }),broken,background)
+  assert.equal(second.status,503)
+  assert.deepEqual(await second.json(),{error:'AUTH_UNAVAILABLE'})
+  assert.equal(db.statements.length,0)
+})
+
+test('CORS OPTIONS / invalid Origin cannot consume rate-limit quota',async()=>{
+  const db=new ApiD1(),calls:string[]=[]
+  const e={...env(db,enabled),
+    AUTH_REQUEST_LIMITER:{limit:async({key}:{key:string})=>{
+      calls.push(key);return {success:true}
+    }}
+  }
+  assert.equal((await handleRequest(req('register','OPTIONS',undefined,{
+    'Access-Control-Request-Method':'POST'
+  }),e)).status,204)
+  assert.equal((await handleRequest(req('register','POST',{},{
+    Origin:'https://untrusted.invalid'
+  }),e)).status,403)
+  assert.deepEqual(calls,[])
+  assert.equal(db.statements.length,0)
 })

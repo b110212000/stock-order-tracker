@@ -109,3 +109,16 @@ CI 會執行 `python3 backend/scripts/check_email_migration.py`，以本地 SQLi
 但正式 D1 0005、WAF、PASSWORD_PEPPER、真實 SMTP 和手機端到端驗收仍待完成。
 安全旗標不可提前開啟，所有 /v1/* 仍應回 503，MLB SMTP Service Binding
 維持原本共用架構，App v1.21.1 的 IndexedDB 與舊設備私鑰皆不修改。
+
+
+## Issue #87：正式 Email Secret／WAF／SMTP 上線前驗收（尚未啟用）
+
+最新部署及驗收操作請見 [AUTH_PRODUCTION_GATE_CHECKLIST.md](AUTH_PRODUCTION_GATE_CHECKLIST.md)。
+新增 Cloudflare Workers 本地（colo）Rate Limiting Binding `AUTH_REQUEST_LIMITER` 作為
+尚未啟用的 Email Auth 流程的快速限速保護；它在 D1 查詢及 PBKDF2 前執行，
+失效時必須拒絕請求。原本 D1 IP/Email 原子限額不變。
+
+**重要：workers.dev 不代表已套用自己 Cloudflare Zone 的 WAF 規則**。
+`PASSWORD_PEPPER` Cloudflare Secret、實際的網域/WAF 或明確核准的替代防護、
+真實 Gmail 私有 RPC 收件測試與 Worker CPU/iPhone E2E 仍待完成；
+所有 Auth flags 預設仍關閉（/v1/* 繼續 503），沒有財務資料上雲。

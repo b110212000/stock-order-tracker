@@ -10,6 +10,8 @@ import {allowedAuthOrigin,authCorsHeaders} from './auth-origin'
 import type {EnrollmentD1} from './auth-registration'
 import {reserveEmailIpAttempt,reserveEmailAddressAttempt} from './email-auth-rate'
 import type {EmailRatePurpose} from './email-auth-rate'
+import {reserveAuthWorkerAttempt} from './email-auth-worker-rate'
+import type {AuthWorkerRateEnvironment} from './email-auth-worker-rate'
 import {
   prepareEmailSignup,confirmEmailSignup,loginEmailPassword,
   authenticateEmailSession,logoutEmailSession,
@@ -20,7 +22,7 @@ import type {OrderLeadMailEnv} from './mlb-mail'
 import {decode32ByteToken} from './auth-primitives'
 import {normalizePassword} from './email-password-primitives'
 
-export type EmailAuthEnvironment=OrderLeadMailEnv&{
+export type EmailAuthEnvironment=OrderLeadMailEnv&AuthWorkerRateEnvironment&{
   DB:EnrollmentD1
   PASSWORD_PEPPER?:string
 }
@@ -126,6 +128,9 @@ export async function handleEmailAuthRequest(
     // WAF/edge gate is separately enforced by handleRequest().
     if(!env?.DB)throw Error('EMAIL_AUTH_UNAVAILABLE')
     const pepper=validPepper(env)
+    // Fast, colo-local limiter is required before D1 and PBKDF2.
+    // D1 IP/email quotas remain the global authority. Neither replaces WAF.
+    await reserveAuthWorkerAttempt(env,request,route.purpose,pepper)
     await reserveEmailIpAttempt(env.DB,request,route.purpose,now)
 
     switch(url.pathname){
