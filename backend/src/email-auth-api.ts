@@ -96,8 +96,12 @@ function validPepper(env:EmailAuthEnvironment):string{
 }
 
 /** Frontend-visible API only when ALL gates on index.ts explicitly pass. */
+export interface AuthBackgroundContext{
+  waitUntil(promise:Promise<unknown>):void
+}
 export async function handleEmailAuthRequest(
-  request:Request,env:EmailAuthEnvironment,now=Date.now()
+  request:Request,env:EmailAuthEnvironment,
+  tasks?:AuthBackgroundContext,now=Date.now()
 ):Promise<Response>{
   const url=new URL(request.url)
   const route=routes.get(url.pathname)
