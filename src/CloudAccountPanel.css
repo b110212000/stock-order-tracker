@@ -107,3 +107,7 @@
 /* Issue #109: verified Email identity in the signed-in account panel. */
 .cloud-account-signed-email{color:var(--text);overflow-wrap:anywhere}
 .cloud-account-signed-email strong{font-size:13px;font-weight:750}
+
+/* #113: human-readable cloud sync state, no progress/debug log panel. */
+.cloud-sync-status{margin-left:auto;flex-shrink:0;white-space:nowrap;
+  font-size:12px;font-weight:700;color:var(--sub);text-align:right}
