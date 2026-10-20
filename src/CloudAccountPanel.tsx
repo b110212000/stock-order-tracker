@@ -23,7 +23,23 @@ async function api(path:string,method:'GET'|'POST'='GET',data?:unknown,token?:st
     ...(data!==undefined?{body:JSON.stringify(data)}:{})})
   const value=await response.json().catch(()=>({})) as Record<string,unknown>
   if(!response.ok){
-    if(response.status===503)throw Error('Cloudflare 雲端服務尚未開放')
+    if(response.status===503){
+      if(value.error==='SYNC_NOT_ENABLED')
+        throw Error('雲端功能尚未啟用，請確認 Worker 部署版本')
+      if(path==='/v1/auth/email/register'){
+        const stages:Record<string,string>={
+          MAIL_BINDING:'MLB 郵件連線',
+          PASSWORD_HASH:'密碼運算',
+          ACCOUNT_LOOKUP:'帳號資料查詢',
+          SIGNUP_STORAGE:'待驗證帳號寫入',
+          REGISTRATION_INTERNAL:'註冊內部檢查'
+        }
+        const stage=typeof value.phase==='string'?stages[value.phase]:undefined
+        throw Error(stage?'註冊服務失敗：'+stage+'（HTTP 503）':
+          '註冊服務暫時異常（HTTP 503），並非功能未開啟')
+      }
+      throw Error('雲端伺服器暫時無法完成操作（HTTP 503）')
+    }
     if(response.status===429)throw Error('請求太頻繁，請稍候再試')
     if(response.status===401)throw Error('密碼錯誤或登入已過期，請重新登入')
     if(response.status===400){

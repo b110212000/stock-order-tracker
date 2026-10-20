@@ -336,3 +336,30 @@ test('registration accepts 5-character passwords but rejects 4 before pending si
   assert.equal(sent.length,1)
   assert.equal(JSON.stringify(db.pending).includes('abcde'),false)
 })
+
+test('signup storage and missing mail binding give safe 503 phases',async()=>{
+  const db=new ApiD1()
+  const missingMail=await handleRequest(req('register','POST',{
+    email:'probe@example.invalid',password:'abcde',confirmPassword:'abcde'
+  }),env(db,enabled),background)
+  assert.equal(missingMail.status,503)
+  assert.deepEqual(await missingMail.json(),{
+    error:'AUTH_UNAVAILABLE',phase:'MAIL_BINDING'
+  })
+  const prepare=db.prepare.bind(db)
+  db.prepare=(sql:string):EnrollmentStatement=>{
+    const stmt=prepare(sql)
+    if(!sql.startsWith('INSERT INTO auth_email_signup_pending'))return stmt
+    const blocked:EnrollmentStatement={
+      ...stmt,
+      bind(...args){stmt.bind(...args);return blocked},
+      run:async()=>{throw Error('internal database issue')}
+    }
+    return blocked
+  }
+  const storage=await handleRequest(req('register','POST',{
+    email:'probe@example.invalid',password:'abcde',confirmPassword:'abcde'
+  }),{...env(db,enabled),MLB_MAIL:{sendAuthMail:async()=>({accepted:true})}},background)
+  assert.equal(storage.status,503)
+  assert.deepEqual(await storage.json(),{error:'AUTH_UNAVAILABLE',phase:'SIGNUP_STORAGE'})
+})

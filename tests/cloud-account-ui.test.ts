@@ -29,6 +29,10 @@ test('Email forms, verified cloud upload and optional restore are wired, never s
   assert.match(panel,/密碼至少 5 字元/)
   assert.match(panel,/value\.error==='INVALID_OR_EXPIRED_LINK'/)
   assert.match(panel,/Email 或密碼格式不正確/)
+  assert.match(panel,/SYNC_NOT_ENABLED/)
+  assert.match(panel,/SIGNUP_STORAGE/)
+  assert.match(panel,/MAIL_BINDING/)
+  assert.doesNotMatch(panel,/Cloudflare 雲端服務尚未開放/)
   assert.doesNotMatch(panel,/輸入或驗證連結無效/)
   assert.doesNotMatch(panel,/minLength=\{12\}/)
   assert.match(panel,/prepareLocalCloudBackup\(version\)/)
@@ -52,9 +56,9 @@ test('mobile layout still uses narrow screen and current theme variables',()=>{
   assert.match(layout,/var\(--text\)/)
 })
 
-test('v1.22.1 adds offline UI while production auth and backup routes stay disabled by default',async()=>{
-  assert.match(app,/const VERSION='1\.22\.1'/)
-  assert.equal(pkg.version,'1.22.1')
+test('v1.22.2 adds offline UI while production auth and backup routes stay disabled by default',async()=>{
+  assert.match(app,/const VERSION='1\.22\.2'/)
+  assert.equal(pkg.version,'1.22.2')
   const env:Env={DB:{prepare(){throw Error('must not touch remote D1')}}}
   for(const path of ['/v1/auth/email/register','/v1/auth/email/login',
     '/v1/auth/email/forgot-password','/v1/auth/email/reset-password',
