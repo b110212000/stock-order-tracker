@@ -166,13 +166,8 @@ export async function handleEmailAuthRequest(
         return response(200,{status:'password_reset_sign_in_again'},origin)
       }
       case '/v1/auth/email/logout':{
-        if(request.body){
-          const bytes=Number(request.headers.get('Content-Length'))
-          if(bytes>0)throw Error('INVALID_INPUT')
-          // Reject streamed or unknown-length request bodies as well.
-          const data=await request.text()
-          if(data!=='')throw Error('INVALID_INPUT')
-        }
+        // Logout carries ONLY the Authorization header, never a body.
+        if(request.body)throw Error('INVALID_INPUT')
         await logoutEmailSession(env.DB,bearer(request),now)
         return response(200,{status:'signed_out'},origin)
       }
