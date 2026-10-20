@@ -76,18 +76,31 @@ export async function prepareEmailSignup(
 ):Promise<EmailMailIntent|null>{
   if(!validClock(now))return invalid()
   const email=normalizeEmailAddress(emailInput)
-  const verifier=await createPasswordVerifier(password,pepper)
+  let verifier:PasswordVerifier
+  try{verifier=await createPasswordVerifier(password,pepper)}
+  catch(error){
+    if(error instanceof Error&&['INVALID_PASSWORD','PASSWORD_PEPPER_UNAVAILABLE'].includes(error.message))
+      throw error
+    // Constant diagnostic category, never SQL messages or credentials.
+    throw Error('SIGNUP_HASH_UNAVAILABLE')
+  }
   // KDF above executes even for an existing Email to reduce enumeration timing.
-  const already=await lookupEmail(db,email)
+  let already:StoredCredential|null
+  try{already=await lookupEmail(db,email)}
+  catch{throw Error('SIGNUP_LOOKUP_UNAVAILABLE')}
   if(already)return null
   const {token,tokenSha256}=await newEmailActionToken('verify-email')
   const pendingId=crypto.randomUUID()
-  const result=await db.prepare(
-    'INSERT INTO auth_email_signup_pending (pending_id,email_normalized,password_salt,password_hash,password_algorithm,password_iterations,verify_token_sha256,created_at,expires_at,consumed_at) VALUES (?,?,?,?,?,?,?,?,?,NULL)'
-  ).bind(pendingId,email,verifier.passwordSalt,verifier.passwordHash,
-    verifier.passwordAlgorithm,verifier.passwordIterations,
-    tokenSha256,iso(now),iso(now+EMAIL_VERIFY_TTL_MS)).run()
-  if(result.meta.changes!==1)return invalid()
+  let changes:number
+  try{
+    const result=await db.prepare(
+      'INSERT INTO auth_email_signup_pending (pending_id,email_normalized,password_salt,password_hash,password_algorithm,password_iterations,verify_token_sha256,created_at,expires_at,consumed_at) VALUES (?,?,?,?,?,?,?,?,?,NULL)'
+    ).bind(pendingId,email,verifier.passwordSalt,verifier.passwordHash,
+      verifier.passwordAlgorithm,verifier.passwordIterations,
+      tokenSha256,iso(now),iso(now+EMAIL_VERIFY_TTL_MS)).run()
+    changes=result.meta.changes
+  }catch{throw Error('SIGNUP_WRITE_UNAVAILABLE')}
+  if(changes!==1)return invalid()
   return {kind:'verify',email,token,messageId:pendingId}
 }
 
