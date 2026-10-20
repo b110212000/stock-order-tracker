@@ -32,7 +32,8 @@
   "vars": {
     "AUTH_ROUTES_ENABLED": "true",
     "AUTH_BASIC_LIMITS_READY": "true",
-    "EMAIL_AUTH_ENABLED": "true"
+    "EMAIL_AUTH_ENABLED": "true",
+    "BACKUP_RECOVERY_ENABLED": "true"
   },
   "secrets": {
     "required": [
