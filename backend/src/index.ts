@@ -18,6 +18,11 @@ export interface Env {
   /** Both explicit flags must be set AFTER security review/real D1 tests. */
   AUTH_ROUTES_ENABLED?:string
   AUTH_EDGE_PROTECTED?:string
+  /** Email path requires all three gates; legacy device path needs a fourth. */
+  EMAIL_AUTH_ENABLED?:string
+  LEGACY_DEVICE_AUTH_ENABLED?:string
+  /** Mandatory Cloudflare Secret. Never place its value in source code. */
+  PASSWORD_PEPPER?:string
 }
 
 const responseHeaders={
