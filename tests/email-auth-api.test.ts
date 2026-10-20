@@ -11,6 +11,8 @@ const base='https://orderlead-api.example.invalid'
 const origin='https://b110212000.github.io'
 const routes=['register','verify','login','forgot-password','reset-password','logout','me']
 const token=()=>base64UrlEncode(crypto.getRandomValues(new Uint8Array(32)))
+const pendingJobs:Promise<unknown>[]=[]
+const background={waitUntil(p:Promise<unknown>){pendingJobs.push(p)}}
 
 /** A narrow fake for routing / limits / mail transport, not real D1 concurrency. */
 class ApiD1 implements EnrollmentD1 {
@@ -134,10 +136,11 @@ test('registration accepts correct payload, stores pending only and uses no publ
   const res=await handleRequest(req('register','POST',{
     email:' Example+signup@Example.COM ',password:'A unique sufficiently long password',
     confirmPassword:'A unique sufficiently long password'
-  }),{...e,MLB_MAIL:mailBinding})
+  }),{...e,MLB_MAIL:mailBinding},background)
   assert.equal(res.status,202)
   assert.deepEqual(await res.json(),{status:'check_email_if_eligible'})
   assert.equal(db.pending.length,1)
+  await Promise.all(pendingJobs.splice(0))
   assert.equal(sent.length,1)
   const args=sent[0] as {id:string,kind:string,to:string,link:string}
   assert.equal(args.kind,'verify')
@@ -150,7 +153,7 @@ test('registration accepts correct payload, stores pending only and uses no publ
 test('forgot password sends generic result even for unknown and known accounts',async()=>{
   const db=new ApiD1(),e=env(db,enabled),sent:unknown[]=[]
   const extra={MLB_MAIL:{sendAuthMail:async(p:unknown)=>{sent.push(p);return {accepted:true}}}}
-  const unknown=await handleRequest(req('forgot-password','POST',{email:'unknown@example.com'}),{...e,...extra})
+  const unknown=await handleRequest(req('forgot-password','POST',{email:'unknown@example.com'}),{...e,...extra},background)
   assert.equal(unknown.status,202)
   const before=sent.length
   // The adapter is not supposed to disclose existence through HTTP status.
@@ -161,17 +164,18 @@ test('forgot password sends generic result even for unknown and known accounts',
   const known=await handleRequest(req('forgot-password','POST',{email:'known@example.com'}),{...e,...extra})
   assert.equal(known.status,202)
   assert.deepEqual(await unknown.clone().json(),await known.json())
+  await Promise.all(pendingJobs.splice(0))
   assert.equal(sent.length,before+1)
   assert.equal((sent.at(-1) as {kind:string}).kind,'reset')
 })
 
 test('D1 request quotas rate-limit IP and separately HMAC-protect per-address budget',async()=>{
-  const db=new ApiD1(),e=env(db,enabled)
+  const db=new ApiD1(),e={...env(db,enabled),MLB_MAIL:{sendAuthMail:async()=>({accepted:true})}}
   const address='quota@example.com'
   // Missing transport cannot bypass IP or email quota before KDF work.
   for(let i=0;i<3;i++){
     const response=await handleRequest(req('forgot-password','POST',{email:address},
-      {'CF-Connecting-IP':`203.0.113.${i+10}`}),e)
+      {'CF-Connecting-IP':`203.0.113.${i+10}`}),e,background)
     assert.equal(response.status,i<2?202:429)
   }
   assert.equal([...db.buckets.keys()].every(x=>/^[0-9a-f]{64}$/.test(x)),true)
