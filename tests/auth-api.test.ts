@@ -14,7 +14,10 @@ const explode:Env['DB']={
   prepare(){throw Error('DB_MUST_NOT_BE_QUERIED')}
 }
 const env=(auth?:string,edge?:string):Env=>({
-  DB:explode,AUTH_ROUTES_ENABLED:auth,AUTH_EDGE_PROTECTED:edge
+  DB:explode,AUTH_ROUTES_ENABLED:auth,AUTH_EDGE_PROTECTED:edge,
+  // Legacy routes now have an independent opt-in gate to avoid accidentally
+  // activating UUID login alongside the new Email login.
+  LEGACY_DEVICE_AUTH_ENABLED:auth==='true'&&edge==='true'?'true':undefined
 })
 function request(path:string,method:string='POST',headers:Record<string,string>={}):Request{
   return new Request(api+path,{method,headers:{...baseHeaders,...headers}})

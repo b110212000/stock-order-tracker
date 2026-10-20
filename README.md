@@ -2,6 +2,12 @@
 
 目前版本：**v1.21.1（雲端帳號改採 Email＋自訂密碼方案；目前仍未啟用雲端登入及備份）**
 
+## 後端 Issue #75／#79：Email API 已整合但**完全預設關閉**
+
+- 後端 `backend/src/email-auth-core.ts`、`backend/src/email-auth-api.ts` 實作待驗證 Email 註冊、一次性驗證 token、密碼登入、短效 Session、登出、忘記密碼與安全重設；採原有 MLB SMTP Worker 的私有 `MLB_MAIL` Service Binding 在 `waitUntil()` 背景寄信。只有擁有正確 Email 的人才能驗證帳號，所有私有交易資料仍需有明確 Session。
+- 三重安全閘門 `AUTH_ROUTES_ENABLED=true`、`AUTH_EDGE_PROTECTED=true`、`EMAIL_AUTH_ENABLED=true` 缺一不可，這三個旗標**目前都沒有設定**。舊 UUID API 又需 `LEGACY_DEVICE_AUTH_ENABLED=true` 才會開放，**任何開關都不能現在開啟**。
+- `0005`、真實 D1、MLB Gmail 投遞、Cloudflare edge 防護、真實 PBKDF2 Workers CPU、iPhone E2E、密碼更改通知與正式 UI 尚需驗收；所有 `/v1/*` 預設 HTTP 503，沒有交易資料上傳雲端。
+
 ## v1.21.1 — Email＋密碼帳號安全架構準備（Issue #73／#53）
 
 - 使用者決議將主要登入方式從「User UUID＋隨機恢復金鑰」改為 **Email＋自訂密碼**，並使用 Email 驗證、忘記密碼寄重設連結。新的安全規格見 [backend/EMAIL_PASSWORD_AUTH.md](backend/EMAIL_PASSWORD_AUTH.md)。
