@@ -10,28 +10,30 @@ const settings=readFileSync(new URL('../src/SettingsPage.tsx',import.meta.url),'
 const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8')
 const pkg=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'))
 
-test('Settings retains a collapsed cloud account entry and local backup controls',()=>{
-  assert.match(settings,/const \[cloudOpen,setCloudOpen\]=useState\(false\)/)
+test('Settings keeps local backup and opens cloud account for verification deep links',()=>{
+  assert.match(settings,/cloudOpen,setCloudOpen/)
+  assert.match(settings,/email-verify\|reset-password/)
   assert.match(settings,/雲端帳號/)
-  assert.match(settings,/Email＋密碼登入 · 開發中/)
+  assert.match(settings,/Email 登入 · 備份／還原/)
   assert.match(settings,/aria-expanded=\{cloudOpen\}/)
-  assert.match(settings,/cloudOpen&&<div id="orderlead-cloud-account"><CloudAccountPanel\/>/)
-  assert.match(settings,/backupOpen&&<BackupPanel version=\{version\}\/>/)
+  assert.match(settings,/CloudAccountPanel version=\{version\}/)
+  assert.match(settings,/backupOpen&&<BackupPanel version=\{version\}/)
 })
 
-test('new Email-password decision is reflected without a fake working signup form',()=>{
-  assert.match(panel,/Email＋密碼登入/)
-  assert.match(panel,/信箱驗證/)
-  assert.match(panel,/Email 安全重設忘記的密碼/)
-  assert.match(panel,/雲端登入尚未開放/)
-  assert.match(panel,/交易資料仍只存放在這台裝置/)
-  assert.match(panel,/原有資料會保留/)
-  assert.match(panel,/系統不會刪除或覆蓋它/)
+test('Email forms, verified cloud upload and optional restore are wired, never storing a raw bearer token',()=>{
+  assert.match(panel,/Email 登入/)
+  assert.match(panel,/forgot-password/)
+  assert.match(panel,/reset-password/)
+  assert.match(panel,/email-verify/)
+  assert.match(panel,/prepareLocalCloudBackup\(version\)/)
+  assert.match(panel,/planFirstCloudUpload\(/)
+  assert.match(panel,/verifyCloudBackupSnapshot\(/)
+  assert.match(panel,/restoreLocalData\(/)
+  assert.match(panel,/merge/)
+  assert.match(panel,/window\.prompt/)
   assert.doesNotMatch(panel,/createPendingCloudIdentity|savePendingCloudDevice/)
-  assert.doesNotMatch(panel,/draft\.recoveryKey|password.*input|<input|<form/)
-  assert.doesNotMatch(panel,/fetch\(|XMLHttpRequest|axios|new WebSocket/)
-  assert.doesNotMatch(panel,/localStorage|sessionStorage|window\.location|console\.log|console\.error/)
-  assert.doesNotMatch(panel,/deleteDatabase|\.clear\(|\.delete\(|replaceAll\(/)
+  assert.doesNotMatch(panel,/localStorage|sessionStorage|console\.log|console\.error/)
+  assert.doesNotMatch(panel,/deleteDatabase|replaceAll\(/)
 })
 
 test('mobile layout still uses narrow screen and current theme variables',()=>{
@@ -44,9 +46,9 @@ test('mobile layout still uses narrow screen and current theme variables',()=>{
   assert.match(layout,/var\(--text\)/)
 })
 
-test('UX correction only bumps patch version, all public auth and backup routes remain disabled',async()=>{
+test('v1.22.0 adds offline UI while production auth and backup routes stay disabled by default',async()=>{
   assert.match(app,/const VERSION='1\.21\.1'/)
-  assert.equal(pkg.version,'1.21.1')
+  assert.equal(pkg.version,'1.22.0')
   const env:Env={DB:{prepare(){throw Error('must not touch remote D1')}}}
   for(const path of ['/v1/auth/email/register','/v1/auth/email/login',
     '/v1/auth/email/forgot-password','/v1/auth/email/reset-password',
