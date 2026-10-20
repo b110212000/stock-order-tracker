@@ -158,7 +158,7 @@ test('forgot password sends generic result even for unknown and known accounts',
   const before=sent.length
   // The adapter is not supposed to disclose existence through HTTP status.
   db.existing={user_id:crypto.randomUUID(),email_normalized:'known@example.com',
-    password_salt:'abcdefghijklmnopqrstuv',password_hash:'x'.repeat(43),
+    password_salt:base64UrlEncode(new Uint8Array(16)),password_hash:base64UrlEncode(new Uint8Array(32)),
     password_algorithm:'pbkdf2-sha256-pepper-v1',password_iterations:600000,
     password_version:1,disabled_at:null}
   const known=await handleRequest(req('forgot-password','POST',{email:'known@example.com'}),{...e,...extra},background)
@@ -188,7 +188,7 @@ test('malformed login password reveals no difference between existing and unknow
     email:'absent@example.com',password:'short'
   }),e)
   db.existing={user_id:crypto.randomUUID(),email_normalized:'present@example.com',
-    password_salt:'abcdefghijklmnopqrstuv',password_hash:'x'.repeat(43),
+    password_salt:base64UrlEncode(new Uint8Array(16)),password_hash:base64UrlEncode(new Uint8Array(32)),
     password_algorithm:'pbkdf2-sha256-pepper-v1',password_iterations:600000,
     password_version:1,disabled_at:null}
   const known=await handleRequest(req('login','POST',{
