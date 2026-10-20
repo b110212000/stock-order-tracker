@@ -33,7 +33,7 @@ export async function requestAuthEmail(
   rawToken:unknown
 ):Promise<void>{
   if(kind!=='verify'&&kind!=='reset')throw Error('MAIL_INVALID')
-  if(!decode32ByteToken(rawToken))throw Error('MAIL_INVALID')
+  if(typeof rawToken!=='string'||!decode32ByteToken(rawToken))throw Error('MAIL_INVALID')
   const email=normalizeEmailAddress(recipient)
   if(!env?.MLB_MAIL?.sendAuthMail)throw Error('MAIL_UNAVAILABLE')
   const route=kind==='verify'?'email-verify':'reset-password'
