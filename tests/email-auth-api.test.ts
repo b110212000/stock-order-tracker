@@ -161,7 +161,7 @@ test('forgot password sends generic result even for unknown and known accounts',
     password_salt:'abcdefghijklmnopqrstuv',password_hash:'x'.repeat(43),
     password_algorithm:'pbkdf2-sha256-pepper-v1',password_iterations:600000,
     password_version:1,disabled_at:null}
-  const known=await handleRequest(req('forgot-password','POST',{email:'known@example.com'}),{...e,...extra})
+  const known=await handleRequest(req('forgot-password','POST',{email:'known@example.com'}),{...e,...extra},background)
   assert.equal(known.status,202)
   assert.deepEqual(await unknown.clone().json(),await known.json())
   await Promise.all(pendingJobs.splice(0))
