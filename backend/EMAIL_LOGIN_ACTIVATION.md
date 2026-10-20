@@ -23,8 +23,7 @@ Cloudflare 管理的 *orderlead-api* Worker → Settings → Variables and Secre
 - 不要把 Secret 值提交 GitHub、貼到聊天或填成一般 Wrangler `vars`。
 - **不得共用 MLB 的 SMTP_PASSWORD 當 Pepper**：電子郵件登入與寄信須分開保護。
 
-`wrangler.jsonc` 另外宣告 `secrets.required=["PASSWORD_PEPPER"]`。
-若 Cloudflare 尚未配置此 Secret，Workers Builds 正式發佈應 **拒絕部署**，避免把沒有密碼金鑰的登入當成已上線。
+2026-10-20 更新：移除只供部署前核對的 `secrets.required` 宣告，因為曾發生後續 GitHub 自動部署找不到已在 Dashboard 設定的 Secret 而失敗。**這不移除 Cloudflare 裡的 Secret，也不降低執行時驗證**：`validPepper()` 對缺少／不合法的 `PASSWORD_PEPPER` 一律回 503 `AUTH_UNAVAILABLE`，不允許建立帳號、登入或寄送驗證信；Secret 仍只儲存在 Cloudflare，非 GitHub。正式部署是否成功必須以 Cloudflare Workers Builds 結果為準。
 
 若已設定 Secret：確認 Cloudflare Workers Builds 將 GitHub main 新版部署成功；若部署在加入 Secret 前失敗，按 **Retry deployment** 或重新部署 main。現在程式仍需要測試私人收件地址收到驗證信、登入成功與重設密碼。
 
