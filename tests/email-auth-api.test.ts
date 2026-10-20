@@ -54,9 +54,10 @@ class ApiD1 implements EnrollmentD1 {
   }
   batch():Promise<Array<{meta:{changes:number}}>>{throw Error('no batch for this router test')}
 }
-function env(db:EnrollmentD1,flags:{auth?:string,edge?:string,email?:string,legacy?:string,pepper?:string}={}):Env{
+function env(db:EnrollmentD1,flags:{auth?:string,basic?:string,edge?:string,email?:string,legacy?:string,pepper?:string}={}):Env{
   return {DB:db as unknown as Env['DB'],
     AUTH_ROUTES_ENABLED:flags.auth,
+    AUTH_BASIC_LIMITS_READY:flags.basic,
     AUTH_EDGE_PROTECTED:flags.edge,
     EMAIL_AUTH_ENABLED:flags.email,
     LEGACY_DEVICE_AUTH_ENABLED:flags.legacy,
@@ -71,13 +72,15 @@ function req(route:string,method='POST',payload?:unknown,headers:Record<string,s
     method,headers:all,...(payload!==undefined?{body:JSON.stringify(payload)}:{})
   })
 }
-const enabled={auth:'true',edge:'true',email:'true',pepper}
+const enabled={auth:'true',basic:'true',email:'true',pepper}
 
 test('Email routes cannot be activated without ALL three independent security gates',async()=>{
   const db=new ApiD1()
-  for(const flags of [{}, {auth:'true'}, {auth:'true',edge:'true'},
-    {auth:'true',email:'true'}, {edge:'true',email:'true'},
-    {auth:'true',edge:'true',email:'false'}]){
+  for(const flags of [{}, {auth:'true'}, {auth:'true',basic:'true'},
+    {auth:'true',email:'true'}, {basic:'true',email:'true'},
+    {auth:'true',basic:'true',email:'false'},
+    // Old WAF flag alone can never open the new personal Email routes.
+    {auth:'true',edge:'true',email:'true'}]){
     for(const route of routes){
       const res=await handleRequest(req(route),env(db,flags))
       assert.equal(res.status,503,route)
@@ -289,4 +292,25 @@ test('CORS OPTIONS / invalid Origin cannot consume rate-limit quota',async()=>{
   }),e)).status,403)
   assert.deepEqual(calls,[])
   assert.equal(db.statements.length,0)
+})
+
+test('personal Email gate still requires a valid Cloudflare pepper and Worker limiter',async()=>{
+  const db=new ApiD1()
+  const approved=env(db,enabled)
+  const missingPepper=env(db,{...enabled,pepper:undefined})
+  const missingLimiter=env(db,enabled)
+  delete missingLimiter.AUTH_REQUEST_LIMITER
+  for(const unsafe of [missingPepper,missingLimiter]){
+    const result=await handleRequest(req('register','POST',{
+      email:'example@example.com',password:'A sufficiently long passphrase',
+      confirmPassword:'A sufficiently long passphrase'
+    }),unsafe,background)
+    assert.equal(result.status,503)
+    assert.deepEqual(await result.json(),{error:'AUTH_UNAVAILABLE'})
+  }
+  assert.equal(db.statements.length,0)
+  const preflight=await handleRequest(req('register','OPTIONS',undefined,{
+    'Access-Control-Request-Method':'POST'
+  }),approved)
+  assert.equal(preflight.status,204)
 })
