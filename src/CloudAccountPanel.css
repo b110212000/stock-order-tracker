@@ -103,3 +103,7 @@
 @media(max-width:390px){.cloud-snapshot>button{width:100%}}
 
 .cloud-password-hint{font-size:12px;line-height:1.5;color:var(--sub);display:block}
+
+/* Issue #109: verified Email identity in the signed-in account panel. */
+.cloud-account-signed-email{color:var(--text);overflow-wrap:anywhere}
+.cloud-account-signed-email strong{font-size:13px;font-weight:750}
