@@ -161,10 +161,14 @@ export async function handleEmailAuthRequest(
       case '/v1/auth/email/forgot-password':{
         const body=fields(await readJson(request),['email'])
         await reserveEmailAddressAttempt(env.DB,body.email,'forgot',pepper,now)
+        if(!tasks?.waitUntil||!env.MLB_MAIL?.sendAuthMail)
+          throw Error('EMAIL_AUTH_UNAVAILABLE')
         const intent=await preparePasswordReset(env.DB,body.email,now)
         if(intent){
-          try{await requestAuthEmail(env,intent.kind,intent.email,intent.token,intent.messageId)}
-          catch{/* Even a mail outage must not enumerate registered addresses. */}
+          tasks.waitUntil(
+            requestAuthEmail(env,intent.kind,intent.email,intent.token,intent.messageId)
+              .catch(()=>{/* Never disclose account existence via SMTP errors. */})
+          )
         }
         return response(202,{status:'check_email_if_eligible'},origin)
       }
