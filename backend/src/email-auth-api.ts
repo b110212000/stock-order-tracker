@@ -194,7 +194,7 @@ export async function handleEmailAuthRequest(
       case '/v1/auth/email/me':{
         const owner=await authenticateEmailSession(env.DB,bearer(request),now)
         // Only authenticated Session supplies owner, never a user-submitted UUID.
-        return response(200,{userId:owner.userId,expiresAt:owner.expiresAt},origin)
+        return response(200,{userId:owner.userId,email:owner.email,expiresAt:owner.expiresAt},origin)
       }
       default:return response(404,{error:'NOT_FOUND'},origin)
     }
