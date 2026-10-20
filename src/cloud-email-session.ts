@@ -70,3 +70,32 @@ export function readCloudSession():CloudEmailSession|null{
   }
   return null
 }
+
+/** Refresh quietly while the PWA is in use even if the account panel is closed.
+ * A session with more than 29 days remaining is not sent to the network.
+ * Offline/429/5xx never log the user out; 401 means a server-revoked token.
+ */
+let renewalPending=false
+export async function renewStoredCloudSession():Promise<void>{
+  if(renewalPending)return
+  const saved=readCloudSession()
+  if(!saved||saved.expiresAt-Date.now()>=29*24*60*60*1000)return
+  renewalPending=true
+  try{
+    const res=await fetch('https://orderlead-api.b110212000.workers.dev/v1/auth/email/me',{
+      method:'GET',cache:'no-store',
+      headers:{Authorization:'Bearer '+saved.token}
+    })
+    if(readCloudSession()?.token!==saved.token)return
+    if(res.status===401){
+      forgetCloudSession()
+      return
+    }
+    if(!res.ok)return
+    const owner=await res.json() as {expiresAt?:unknown}
+    if(typeof owner.expiresAt!=='number')return
+    const updated={token:saved.token,expiresAt:owner.expiresAt}
+    if(validCloudSession(updated))rememberCloudSession(updated)
+  }catch{/* Offline is not a logout reason. */}
+  finally{renewalPending=false}
+}
