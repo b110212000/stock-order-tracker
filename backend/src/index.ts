@@ -15,10 +15,13 @@ export interface D1HealthBinding {
 }
 export interface Env {
   DB: D1HealthBinding
-  /** Both explicit flags must be set AFTER security review/real D1 tests. */
+  /** Explicit opt-in. Both login and cloud backup stay locked by default. */
   AUTH_ROUTES_ENABLED?:string
+  /** Email requires verified Worker+D1 rate controls, not a paid Zone WAF. */
+  AUTH_BASIC_LIMITS_READY?:string
+  /** Legacy device-only gate is retained but does not open Email routes. */
   AUTH_EDGE_PROTECTED?:string
-  /** Email path requires all three gates; legacy device path needs a fourth. */
+  /** Email path requires three flags; legacy device path remains separate. */
   EMAIL_AUTH_ENABLED?:string
   LEGACY_DEVICE_AUTH_ENABLED?:string
   /** Mandatory Cloudflare Secret. Never place its value in source code. */
@@ -46,11 +49,11 @@ export async function handleRequest(
   // All synchronization paths are locked before verified account-based
   // authorization and conflict handling ship. Never accept anonymous writes.
   if(path==='/v1'||path.startsWith('/v1/')){
-    // Two independent opt-in gates. Both are unset by default.
-    // Every other /v1 route (especially backups) still returns 503.
+    // All flags are unset by default. Personal Email auth may use existing
+    // Worker+D1 limits without a custom Zone WAF; never open backups here.
     if(path.startsWith('/v1/auth/email/')){
       if(env.AUTH_ROUTES_ENABLED==='true'&&
-        env.AUTH_EDGE_PROTECTED==='true'&&
+        env.AUTH_BASIC_LIMITS_READY==='true'&&
         env.EMAIL_AUTH_ENABLED==='true'){
         return handleEmailAuthRequest(request,env as unknown as EmailAuthEnvironment,tasks)
       }

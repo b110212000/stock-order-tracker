@@ -1,3 +1,5 @@
+> **2026-10-20 最新決策（Issue #89）：**本檔第 2、3、4 節對「Email 必須先配置 Zone WAF」的敘述，已由 [PERSONAL_RECOVERY_PLAN.md](PERSONAL_RECOVERY_PLAN.md) 取代。個人用途的 Email API 以 `AUTH_BASIC_LIMITS_READY` 作為第二道手動確認旗標，結合 Cloudflare Workers Rate Limiting Binding + D1 per-IP/Email 限速，不要求購買網域；**仍必須設 PASSWORD_PEPPER，完成真實測試後才可開放登入**。舊 `AUTH_EDGE_PROTECTED` 僅保留給未啟用的 legacy device auth。
+
 # OrderLead #75 / #87 — 正式環境 Secret、限速與真實郵件驗收
 
 > 2026-10-20。本文是操作清單，**不是已完成的 Cloudflare 實測證據**。
