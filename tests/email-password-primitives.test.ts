@@ -111,10 +111,11 @@ test('schema, primitives, and old app do not activate Email endpoints or move fi
   const deploy=JSON.parse(config)
   assert.deepEqual(deploy.secrets,{required:['PASSWORD_PEPPER']})
   assert.deepEqual(deploy.vars,{
-    AUTH_ROUTES_ENABLED:'true',AUTH_BASIC_LIMITS_READY:'true',EMAIL_AUTH_ENABLED:'true'
+    AUTH_ROUTES_ENABLED:'true',AUTH_BASIC_LIMITS_READY:'true',
+    EMAIL_AUTH_ENABLED:'true',BACKUP_RECOVERY_ENABLED:'true'
   })
   assert.equal(deploy.vars.PASSWORD_PEPPER,undefined)
-  assert.equal(deploy.vars.BACKUP_RECOVERY_ENABLED,undefined)
+  assert.equal(deploy.vars.BACKUP_RECOVERY_ENABLED,'true')
   assert.doesNotMatch(config,/RESEND_API_KEY|SMTP_PASSWORD|SMTP_USER/)
   assert.match(app,/const VERSION='1\.22\.0'/)
   const env:Env={DB:{prepare(){throw Error('no real DB access')}}}
