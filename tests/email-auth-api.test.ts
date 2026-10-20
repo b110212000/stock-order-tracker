@@ -182,6 +182,23 @@ test('D1 request quotas rate-limit IP and separately HMAC-protect per-address bu
   assert.equal(JSON.stringify([...db.buckets.keys()]).includes(address),false)
 })
 
+test('malformed login password reveals no difference between existing and unknown Email',async()=>{
+  const db=new ApiD1(),e=env(db,enabled)
+  const unknown=await handleRequest(req('login','POST',{
+    email:'absent@example.com',password:'short'
+  }),e)
+  db.existing={user_id:crypto.randomUUID(),email_normalized:'present@example.com',
+    password_salt:'abcdefghijklmnopqrstuv',password_hash:'x'.repeat(43),
+    password_algorithm:'pbkdf2-sha256-pepper-v1',password_iterations:600000,
+    password_version:1,disabled_at:null}
+  const known=await handleRequest(req('login','POST',{
+    email:'present@example.com',password:'short'
+  }),e)
+  assert.equal(unknown.status,401)
+  assert.equal(known.status,401)
+  assert.deepEqual(await unknown.json(),await known.json())
+})
+
 test('no arbitrary SMTP relay and no owner UUID lookup via public Email endpoints',async()=>{
   const db=new ApiD1(),e=env(db,enabled)
   const bad=await handleRequest(req('register','POST',{
