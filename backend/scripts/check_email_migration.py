@@ -165,6 +165,10 @@ def run() -> None:
         ("b" * 64, "nonexistent-owner", 1, STAMP, LATER),
         "session foreign key",
     )
+    db.execute(
+        "INSERT INTO account_users(id,auth_provider,auth_subject,created_at) VALUES (?,?,?,?)",
+        ("another-owner", "legacy", "another-subject", STAMP),
+    )
     must_reject(
         db,
         "INSERT INTO auth_email_credentials(user_id,email_normalized,email_verified_at,"
@@ -172,6 +176,14 @@ def run() -> None:
         " VALUES (?,?,?,?,?,?,?,?)",
         ("another-owner", "bad@example.com", STAMP, "A" * 22, "B" * 43, 10, STAMP, STAMP),
         "iterations >= 600000",
+    )
+    must_reject(
+        db,
+        "INSERT INTO auth_email_credentials(user_id,email_normalized,email_verified_at,"
+        "password_salt,password_hash,password_iterations,created_at,password_changed_at)"
+        " VALUES (?,?,?,?,?,?,?,?)",
+        ("another-owner", "test@example.com", STAMP, "A" * 22, "B" * 43, 600000, STAMP, STAMP),
+        "unique normalized email",
     )
     db.commit()
     before_reapply = snapshot(db, user_tables(db))
