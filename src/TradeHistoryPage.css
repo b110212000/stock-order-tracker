@@ -65,3 +65,37 @@
   .history-heading h1{font-size:19px}
   .history-heading-actions button{padding:9px 8px!important}
 }
+
+
+/* #115: preserve the existing compact header; format selection is a popover. */
+.history-heading-actions .import-menu-trigger>.history-file-button{min-width:0}
+.history-import-preview{padding:15px;display:flex;flex-direction:column;gap:10px;max-width:100%;min-width:0}
+.history-preview-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.history-preview-heading strong{font-size:15px}
+.history-preview-heading button{background:transparent;border:0;color:var(--sub);display:grid;place-items:center;padding:5px}
+.history-preview-filename{font-size:11px;color:var(--sub);overflow-wrap:anywhere}
+.history-preview-counts{display:flex;flex-wrap:wrap;gap:8px}
+.history-preview-counts span{border-radius:8px;background:var(--bg);padding:8px 10px;color:var(--sub);font-size:12px}
+.history-preview-counts b{color:var(--text);font-variant-numeric:tabular-nums}
+.history-preview-examples{display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--border);padding-top:8px}
+.history-preview-examples>div{display:flex;flex-wrap:wrap;align-items:center;gap:4px 11px;font-size:11px;color:var(--sub)}
+.history-preview-examples b{font-size:12px;color:var(--text)}
+.history-preview-errors{padding:9px 12px;background:#fff0ec;color:#a33d32;border-radius:9px;font-size:12px;line-height:1.5;max-height:180px;overflow:auto}
+.history-preview-errors p{margin:4px 0}
+.history-preview-actions{display:flex;justify-content:flex-end;gap:8px}
+.history-preview-actions button{font-size:12px;padding:9px 12px;border-radius:9px}
+.history-preview-actions button:disabled{opacity:.55}
+@media(max-width:500px){
+ .history-heading{gap:7px}
+ .history-heading h1{font-size:20px}
+ .history-heading-actions{gap:4px}
+ .history-heading-actions .import-menu-trigger>.history-file-button,
+ .history-heading-actions>.primary{font-size:11px!important;min-height:36px;padding:7px 8px!important;gap:4px}
+ .history-heading-actions svg{width:14px;height:14px;flex-shrink:0}
+}
+@media(max-width:370px){
+ .history-heading h1{font-size:18px}
+ .history-heading-actions .import-menu-trigger>.history-file-button,
+ .history-heading-actions>.primary{font-size:10px!important;padding:7px 5px!important}
+ .history-heading-actions svg{width:13px;height:13px}
+}
