@@ -111,7 +111,7 @@ export function createExcelTemplate():Uint8Array{
   '<xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs></styleSheet>'
  const sheet=declaration+'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+
   '<dimension ref="A1:H4"/><sheetViews><sheetView workbookViewId="0"/></sheetViews>'+
-  '<cols><col min="1" max="1" width="19" customWidth="1"/><col min="2" max="2" width="18" customWidth="1"/>'+
+  '<cols><col min="1" max="1" width="19" customWidth="1"/><col min="2" max="2" width="18" customWidth="1" style="2"/>'+
   '<col min="3" max="3" width="18" customWidth="1"/><col min="4" max="8" width="16" customWidth="1"/></cols>'+
   '<sheetData>'+sheetRows+'</sheetData></worksheet>'
  const archive={
@@ -283,7 +283,7 @@ export function parseTabularTrades(bytes:Uint8Array,filename:string):TabularResu
    const gross=Math.round(quantity*price*100)/100
    if(!Number.isFinite(gross)||gross<=0||gross>1000000000000)throw Error('成交價金異常')
    const recurring=typed==='定期定額'
-   const signature=JSON.stringify([date,symbol,side,recurring,quantity,price,parsedTime.time,fee,tax])
+   const signature=JSON.stringify([date,symbol,side,recurring,quantity,price,parsedTime.time])
    const occurrence=counts.get(signature)??0
    counts.set(signature,occurrence+1)
    drafts.push({
