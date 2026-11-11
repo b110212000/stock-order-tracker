@@ -78,3 +78,12 @@ test('rejects broken files, missing fields, duplicate headers and ambiguous date
  const p=parseTabularTrades(strToU8(row),'invalid.csv')
  assert.match(p.errors[0],/日期不存在/)
 })
+
+test('changing optional fee values in an exported sheet does not duplicate identical execution',()=>{
+ const header='日期(必),股票代號(必),交易類型(必),股數(必),成交價(必),手續費(選),交易稅(選)'
+ const original=parseTabularTrades(strToU8(header+'\n2026-11-02,2330,買進,10,1450,,'),'a.csv')
+ const edited=parseTabularTrades(strToU8(header+'\n2026-11-02,2330,買進,10,1450,1,0'),'b.csv')
+ assert.equal(original.drafts[0].id,edited.drafts[0].id)
+ assert.equal(original.drafts[0].fee,null)
+ assert.equal(edited.drafts[0].fee,1)
+})
