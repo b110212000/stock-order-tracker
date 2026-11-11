@@ -14,6 +14,8 @@ export type SourceTrade = {
   fee: number|null
   tax: number|null
   feeStatus?: string
+  recurring?: boolean
+  timeDefaulted?: boolean
 }
 
 const isRecord=(v:unknown):v is Record<string,unknown>=>Boolean(v)&&typeof v==='object'&&!Array.isArray(v)
