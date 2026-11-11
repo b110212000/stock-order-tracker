@@ -1,24 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FileUp, Inbox, Plus, X } from 'lucide-react'
+import { Inbox, Plus, X } from 'lucide-react'
 import { addManualReviewTrade, list, mergeReviewTrades, mutateReviewTrade, uid, now } from './db'
 import { parseTradeImportBytes, MAX_IMPORT_BYTES } from './import-file'
+import {parseTabularTrades,resolveTabularNames} from './tabular-trades'
+import ImportFormatMenu from './ImportFormatMenu'
 import { organizeGmailHistory } from './gmail-history'
 import { groupTradesByStock } from './stock-groups'
 import StockGroupedView from './StockGroupedView'
 import ManualTradeDialog from './ManualTradeDialog'
 import { buildManualTrade } from './manual-review-trades'
-import { namesFromTrades } from './stock-name-directory'
+import { namesFromTrades,lookupStockName } from './stock-name-directory'
 import type { ManualTradeInput } from './manual-review-trades'
 import { toStaged } from './import-trades'
+import type { SourceTrade } from './import-trades'
 import type { StagedTrade } from './types'
 import { editedReviewTrade, assessReviewMutation, mutationPrompt } from './review-ledger-ops'
 import './TradeHistoryPage.css'
 
 export default function TradeHistoryPage(){
-  const picker=useRef<HTMLInputElement>(null)
   const [rows,setRows]=useState<StagedTrade[]>([])
   const [loading,setLoading]=useState(true)
   const [working,setWorking]=useState(false)
+  const [reading,setReading]=useState(false)
+  const [preview,setPreview]=useState<null|{file:string,records:SourceTrade[],errors:string[],duplicates:number,newCount:number}>(null)
   const [message,setMessage]=useState('')
   const [error,setError]=useState('')
   const [manualOpen,setManualOpen]=useState(false)
@@ -46,15 +50,35 @@ export default function TradeHistoryPage(){
   const groups=useMemo(()=>groupTradesByStock(history),[history])
   const knownStockNames=useMemo(()=>namesFromTrades(rows),[rows])
   async function importFile(file:File){
-    setWorking(true);setError('');setMessage('')
+    setReading(true);setError('');setMessage('');setPreview(null)
     try{
       if(file.size>MAX_IMPORT_BYTES)throw Error('檔案過大（上限 10 MB）')
-      const parsed=parseTradeImportBytes(new Uint8Array(await file.arrayBuffer()),file.name)
-      const result=await mergeReviewTrades(toStaged(parsed))
+      const bytes=new Uint8Array(await file.arrayBuffer())
+      let parsed:SourceTrade[],errors:string[]=[]
+      if(/\.(?:csv|xlsx)$/i.test(file.name)){
+        const result=parseTabularTrades(bytes,file.name)
+        const named=await resolveTabularNames(result.drafts,symbol=>
+          lookupStockName(symbol,knownStockNames,import.meta.env.BASE_URL))
+        parsed=named.records
+        errors=[...result.errors,...named.errors]
+      }else parsed=parseTradeImportBytes(bytes,file.name)
+      const existing=await list<StagedTrade>('reviewTrades')
+      const known=new Set(existing.map(row=>row.id))
+      const duplicates=parsed.filter(row=>known.has(row.id)).length
+      setPreview({file:file.name,records:parsed,errors,duplicates,newCount:parsed.length-duplicates})
+    }catch(e){setError('讀取失敗：'+(e instanceof Error?e.message:String(e)))}
+    finally{setReading(false)}
+  }
+  async function confirmImport(){
+    if(!preview||preview.errors.length||preview.newCount===0||working)return
+    setWorking(true);setError('')
+    try{
+      const result=await mergeReviewTrades(toStaged(preview.records))
+      setPreview(null)
       await refresh()
       setMessage('成功匯入 '+result.added+' 筆；'+result.duplicates+' 筆來源已存在，沒有重複加入。原有交易及其他資料均保留。')
-    }catch(e){setError('讀取失敗：'+(e instanceof Error?e.message:String(e)))}
-    finally{setWorking(false);if(picker.current)picker.current.value=''}
+    }catch(e){setError('匯入失敗：'+(e instanceof Error?e.message:String(e)))}
+    finally{setWorking(false)}
   }
   function editRow(row:StagedTrade){
     setEditingRow(row)
@@ -112,12 +136,44 @@ export default function TradeHistoryPage(){
     <div className="history-heading">
       <h1>交易紀錄</h1>
       <div className="history-heading-actions">
-        <button type="button" className="mini-button history-file-button" disabled={working} onClick={()=>picker.current?.click()}><FileUp size={17}/>匯入</button>
-        <button type="button" className="primary" disabled={working} onClick={openAdd}><Plus size={17}/>新增</button>
+        <ImportFormatMenu mode="template" className="mini-button history-file-button" disabled={working||reading}/>
+        <ImportFormatMenu mode="import" className="mini-button history-file-button" disabled={working||reading}
+          onFile={file=>void importFile(file)}/>
+        <button type="button" className="primary" disabled={working||reading} onClick={openAdd}><Plus size={17}/>新增</button>
       </div>
     </div>
-    <input hidden type="file" ref={picker} accept=".json,.zip,application/json,application/zip"
-      onChange={e=>{const file=e.target.files?.[0];if(file)void importFile(file)}}/>
+    {reading&&<div className="history-loading" role="status">正在檢查匯入檔案…</div>}
+    {preview&&<section className="history-import-preview card" aria-label="匯入預覽">
+      <div className="history-preview-heading">
+        <strong>匯入預覽</strong>
+        <button type="button" onClick={()=>setPreview(null)} disabled={working} aria-label="取消匯入"><X size={18}/></button>
+      </div>
+      <small className="history-preview-filename">{preview.file}</small>
+      <div className="history-preview-counts">
+        <span>可新增 <b>{preview.newCount}</b> 筆</span>
+        <span>已存在 <b>{preview.duplicates}</b> 筆</span>
+        <span>需修正 <b>{preview.errors.length}</b> 筆</span>
+      </div>
+      {preview.records.length>0&&<div className="history-preview-examples">
+        {preview.records.slice(0,4).map(record=><div key={record.id}>
+          <span>{record.date}</span>
+          <b>{record.symbol} {record.name}</b>
+          <span>{record.side==='sell'?'賣出':'買進'} {record.quantity} 股</span>
+        </div>)}
+      </div>}
+      {preview.errors.length>0&&<div className="history-preview-errors" role="alert">
+        {preview.errors.slice(0,8).map((reason,i)=><p key={i}>{reason}</p>)}
+        {preview.errors.length>8&&<p>另有 {preview.errors.length-8} 筆錯誤，請先修正檔案。</p>}
+      </div>}
+      <div className="history-preview-actions">
+        <button type="button" className="mini-button" disabled={working} onClick={()=>setPreview(null)}>取消</button>
+        <button type="button" className="primary"
+          disabled={working||preview.errors.length>0||preview.newCount===0}
+          onClick={()=>void confirmImport()}>
+          {working?'匯入中…':preview.errors.length>0?'請先修正檔案':preview.newCount===0?'沒有新交易':'確認匯入'}
+        </button>
+      </div>
+    </section>}
     {!loading&&rows.length>0&&<>
       <div className="grouped-overview" role="status">
         <span><b>{groups.length}</b> 檔股票</span>
