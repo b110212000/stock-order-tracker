@@ -3,6 +3,7 @@ import { ChevronRight, Cloud, CloudDownload, Copy, DatabaseBackup, FileDown, Ref
 import './SettingsPage.css'
 import BackupPanel from './BackupPanel'
 import CloudAccountPanel from './CloudAccountPanel'
+import ImportFormatMenu from './ImportFormatMenu'
 
 type Props={
   version:string
@@ -63,10 +64,8 @@ export default function SettingsPage({version,hasUpdate,checking,repairing,statu
       </div>}
       <div className="settings-item">
         <div className="settings-item-icon"><FileDown size={20}/></div>
-        <div className="settings-item-label"><strong>匯入範例</strong><small>交易 JSON 格式</small></div>
-        <a className="settings-action" href={import.meta.env.BASE_URL+'trade-import-example.json'} download="OrderLead_交易匯入範例.json">
-          下載 <ChevronRight size={16}/>
-        </a>
+        <div className="settings-item-label"><strong>匯入範本</strong><small>Excel 或 JSON 交易範本</small></div>
+        <ImportFormatMenu mode="template" className="settings-action"/>
       </div>
       <div className="settings-item">
         <div className="settings-item-icon"><DatabaseBackup size={20}/></div>
